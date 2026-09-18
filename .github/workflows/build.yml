@@ -16,10 +16,60 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: 8.7
+
       - name: Fix Crash - Theme Fix
         run: |
           FOLDER=$(find . -type d -name "Aalam-Studio*" | head -n 1)
           cd "$FOLDER"
+          echo "Fixing in $FOLDER"
+
+          # 1. ROOT build.gradle FIX - ye sabse important hai
+          cat > build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application' version '8.2.2' apply false
+              id 'com.android.library' version '8.2.2' apply false
+          }
+          task clean(type: Delete) { delete rootProject.buildDir }
+          EOF
+
+          # 2. settings.gradle FIX
+          cat > settings.gradle <<'EOF'
+          pluginManagement {
+              repositories { google(); mavenCentral(); gradlePluginPortal() }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories { google(); mavenCentral() }
+          }
+          rootProject.name = "Aalam-Studio"
+          include ':app'
+          EOF
+
+          # 3. APP FIX
+          cat > app/build.gradle <<'EOF'
+          plugins { id 'com.android.application' }
+          android {
+              namespace 'com.aalam.studio'
+              compileSdk 34
+              defaultConfig {
+                  applicationId "com.aalam.studio"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+              buildTypes { release { minifyEnabled false } }
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+          dependencies {
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+              implementation 'com.google.android.material:material:1.11.0'
+          }
+          EOF
+
           rm -rf app/src/main/java/com/aalamstudio
           rm -rf app/src/main/java/com/aalam
           mkdir -p app/src/main/res/values
@@ -32,7 +82,6 @@ jobs:
           <resources>
               <style name="Theme.AalamStudio" parent="Theme.AppCompat.Light.NoActionBar">
                   <item name="colorPrimary">#111111</item>
-                  <item name="colorPrimaryDark">#000000</item>
                   <item name="colorAccent">#D4AF37</item>
               </style>
           </resources>
@@ -47,26 +96,9 @@ jobs:
 
           cat > app/src/main/res/layout/activity_main.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
-          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:layout_width="match_parent"
-              android:layout_height="match_parent"
-              android:gravity="center"
-              android:orientation="vertical"
-              android:background="#111111">
-              <TextView
-                  android:layout_width="wrap_content"
-                  android:layout_height="wrap_content"
-                  android:text="Aalam Studio - FINAL BUILD!"
-                  android:textColor="#D4AF37"
-                  android:textSize="24sp"
-                  android:textStyle="bold"/>
-              <TextView
-                  android:layout_width="wrap_content"
-                  android:layout_height="wrap_content"
-                  android:layout_marginTop="12dp"
-                  android:text="Ab crash nahi hoga!"
-                  android:textColor="#FFFFFF"
-                  android:textSize="16sp"/>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:orientation="vertical" android:background="#111111">
+              <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Aalam Studio" android:textColor="#D4AF37" android:textSize="28sp" android:textStyle="bold"/>
+              <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="Crash Fixed Version" android:textColor="#FFFFFF" android:textSize="16sp"/>
           </LinearLayout>
           EOF
 
@@ -75,8 +107,7 @@ jobs:
           import android.os.Bundle;
           import androidx.appcompat.app.AppCompatActivity;
           public class MainActivity extends AppCompatActivity {
-              @Override
-              protected void onCreate(Bundle savedInstanceState) {
+              @Override protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
                   setContentView(R.layout.activity_main);
               }
@@ -101,5 +132,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: AalamStudio-debug-FINAL
+          name: AalamStudio-CrashFixed
           path: "**/app/build/outputs/apk/debug/app-debug.apk"
