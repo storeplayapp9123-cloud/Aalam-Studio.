@@ -1,9 +1,7 @@
 name: Build Aalam Studio APK
-
 on:
   push:
     branches: [ main ]
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -20,10 +18,11 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Build APK
+        working-directory: ./Aalam-Studio.
         run: gradle assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: AalamStudio-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: Aalam-Studio./app/build/outputs/apk/debug/app-debug.apk
