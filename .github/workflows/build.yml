@@ -1,34 +1,98 @@
-name: Build APK
-
+name: Build Aalam Studio APK
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - name: Setup Gradle 8.7
+        uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: '8.4'
+          gradle-version: 8.7
+
+      - name: Auto-Fix All Files
+        run: |
+          ls -la
+          FOLDER=$(find . -type d -name "Aalam-Studio*" | head -n 1)
+          echo "Found folder: $FOLDER"
+          cd "$FOLDER"
+          echo "Fixing inside $FOLDER"
+          
+          cat > build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application' version '8.2.2' apply false
+              id 'com.android.library' version '8.2.2' apply false
+          }
+          task clean(type: Delete) {
+              delete rootProject.buildDir
+          }
+          EOF
+
+          cat > settings.gradle <<'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "Aalam-Studio"
+          include ':app'
+          EOF
+
+          cat > app/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+          android {
+              namespace 'com.aalam.studio'
+              compileSdk 34
+              defaultConfig {
+                  applicationId "com.aalam.studio"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+              buildTypes {
+                  release { minifyEnabled false }
+              }
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+          dependencies {
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+              implementation 'com.google.android.material:material:1.11.0'
+              implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+          }
+          EOF
 
       - name: Build APK
-        run: gradle assembleDebug
+        run: |
+          FOLDER=$(find . -type d -name "Aalam-Studio*" | head -n 1)
+          cd "$FOLDER"
+          gradle assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: aalam studio-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: AalamStudio-debug
+          path: "**/app/build/outputs/apk/debug/app-debug.apk"
