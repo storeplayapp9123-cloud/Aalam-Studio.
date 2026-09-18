@@ -18,11 +18,22 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Build APK
-        working-directory: ./Aalam-Studio.
-        run: gradle assembleDebug
+        run: |
+          echo "Finding build.gradle..."
+          find . -name "build.gradle" -type f
+          # Jo folder mile usme chale jao
+          APP_DIR=$(dirname $(find . -name "build.gradle" | grep app | head -n 1))
+          echo "Building in $APP_DIR"
+          cd $APP_DIR/..
+          chmod +x gradlew 2>/dev/null || true
+          if [ -f "./gradlew" ]; then
+            ./gradlew assembleDebug
+          else
+            gradle assembleDebug
+          fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: AalamStudio-debug
-          path: Aalam-Studio./app/build/outputs/apk/debug/app-debug.apk
+          path: "**/app/build/outputs/apk/debug/app-debug.apk"
