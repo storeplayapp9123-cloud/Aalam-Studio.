@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Aalam Studio</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_projects">Projects</string>
+    <string name="nav_templates">Templates</string>
+    <string name="nav_assets">Assets</string>
+    <string name="nav_tutorials">Tutorials</string>
+    <string name="nav_community">Community</string>
+    <string name="nav_tools">Tools</string>
+    <string name="nav_settings">Settings</string>
+    <string name="welcome_title">Welcome Creator</string>
+    <string name="create_app">Create App</string>
+    <string name="create_game">Create Game</string>
+</resources>
