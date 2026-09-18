@@ -7,75 +7,36 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-
       - name: Setup Gradle 8.7
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: 8.7
-
-      - name: Deep Clean & Rebuild App
+      - name: Fix Crash - Theme Fix
         run: |
           FOLDER=$(find . -type d -name "Aalam-Studio*" | head -n 1)
           cd "$FOLDER"
-          echo "Cleaning old code in $FOLDER"
           rm -rf app/src/main/java/com/aalamstudio
           rm -rf app/src/main/java/com/aalam
-          rm -rf app/src/main/res/layout
-          rm -rf app/src/main/res/mipmap-*
-
-          cat > build.gradle <<'EOF'
-          plugins {
-              id 'com.android.application' version '8.2.2' apply false
-              id 'com.android.library' version '8.2.2' apply false
-          }
-          task clean(type: Delete) { delete rootProject.buildDir }
-          EOF
-
-          cat > settings.gradle <<'EOF'
-          pluginManagement {
-              repositories { google(); mavenCentral(); gradlePluginPortal() }
-          }
-          dependencyResolutionManagement {
-              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-              repositories { google(); mavenCentral() }
-          }
-          rootProject.name = "Aalam-Studio"
-          include ':app'
-          EOF
-
-          cat > app/build.gradle <<'EOF'
-          plugins { id 'com.android.application' }
-          android {
-              namespace 'com.aalam.studio'
-              compileSdk 34
-              defaultConfig {
-                  applicationId "com.aalam.studio"
-                  minSdk 24
-                  targetSdk 34
-                  versionCode 1
-                  versionName "1.0"
-              }
-              buildTypes { release { minifyEnabled false } }
-              compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_17
-                  targetCompatibility JavaVersion.VERSION_17
-              }
-          }
-          dependencies {
-              implementation 'androidx.appcompat:appcompat:1.6.1'
-              implementation 'com.google.android.material:material:1.11.0'
-          }
-          EOF
-
+          mkdir -p app/src/main/res/values
           mkdir -p app/src/main/res/drawable
           mkdir -p app/src/main/res/layout
           mkdir -p app/src/main/java/com/aalam/studio
+
+          cat > app/src/main/res/values/themes.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="Theme.AalamStudio" parent="Theme.AppCompat.Light.NoActionBar">
+                  <item name="colorPrimary">#111111</item>
+                  <item name="colorPrimaryDark">#000000</item>
+                  <item name="colorAccent">#D4AF37</item>
+              </style>
+          </resources>
+          EOF
 
           cat > app/src/main/res/drawable/ic_launcher.xml <<'EOF'
           <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
@@ -95,10 +56,17 @@ jobs:
               <TextView
                   android:layout_width="wrap_content"
                   android:layout_height="wrap_content"
-                  android:text="Aalam Studio - BUILD SUCCESS!"
+                  android:text="Aalam Studio - FINAL BUILD!"
                   android:textColor="#D4AF37"
-                  android:textSize="22sp"
+                  android:textSize="24sp"
                   android:textStyle="bold"/>
+              <TextView
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:layout_marginTop="12dp"
+                  android:text="Ab crash nahi hoga!"
+                  android:textColor="#FFFFFF"
+                  android:textSize="16sp"/>
           </LinearLayout>
           EOF
 
@@ -118,12 +86,11 @@ jobs:
           cat > app/src/main/AndroidManifest.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <application android:allowBackup="true" android:icon="@drawable/ic_launcher" android:roundIcon="@drawable/ic_launcher" android:label="Aalam Studio" android:theme="@android:style/Theme.Material.Light">
+              <application android:allowBackup="true" android:icon="@drawable/ic_launcher" android:roundIcon="@drawable/ic_launcher" android:label="Aalam Studio" android:theme="@style/Theme.AalamStudio">
                   <activity android:name=".MainActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity>
               </application>
           </manifest>
           EOF
-          echo "Clean build ready!"
 
       - name: Build APK
         run: |
@@ -134,5 +101,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: AalamStudio-debug
+          name: AalamStudio-debug-FINAL
           path: "**/app/build/outputs/apk/debug/app-debug.apk"
