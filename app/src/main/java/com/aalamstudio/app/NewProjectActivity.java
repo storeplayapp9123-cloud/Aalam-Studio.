@@ -1,6 +1,8 @@
 package com.aalamstudio.app;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -40,12 +42,12 @@ public class NewProjectActivity extends AppCompatActivity {
 
         if (projectType.equals("Game")) {
             screenTitle.setText("New Game Project");
-            panelAppOptions.setVisibility(android.view.View.GONE);
-            panelGameOptions.setVisibility(android.view.View.VISIBLE);
+            panelAppOptions.setVisibility(View.GONE);
+            panelGameOptions.setVisibility(View.VISIBLE);
         } else {
             screenTitle.setText("New App Project");
-            panelAppOptions.setVisibility(android.view.View.VISIBLE);
-            panelGameOptions.setVisibility(android.view.View.GONE);
+            panelAppOptions.setVisibility(View.VISIBLE);
+            panelGameOptions.setVisibility(View.GONE);
         }
 
         orientPortrait = findViewById(R.id.orientPortrait);
@@ -79,25 +81,26 @@ public class NewProjectActivity extends AppCompatActivity {
                 return;
             }
 
-            String extraInfo = projectType.equals("Game") ? selectedGameType : selectedOrientation;
-            Toast.makeText(this,
-                    projectType + " '" + name + "' (" + extraInfo + ") created!",
-                    Toast.LENGTH_LONG).show();
+            String detail = projectType.equals("Game") ? selectedGameType : selectedOrientation;
+
+            Project project = new Project(name, pkg, projectType, detail, System.currentTimeMillis());
+            ProjectStore.addProject(this, project);
+
+            Toast.makeText(this, projectType + " '" + name + "' created!", Toast.LENGTH_LONG).show();
+
+            Intent result = new Intent();
+            setResult(RESULT_OK, result);
             finish();
         });
     }
 
     private void selectOrientation(LinearLayout selected, String orientation) {
-        for (LinearLayout card : orientCards) {
-            card.setSelected(card == selected);
-        }
+        for (LinearLayout card : orientCards) card.setSelected(card == selected);
         selectedOrientation = orientation;
     }
 
     private void selectGameType(LinearLayout selected, String type) {
-        for (LinearLayout card : gameTypeCards) {
-            card.setSelected(card == selected);
-        }
+        for (LinearLayout card : gameTypeCards) card.setSelected(card == selected);
         selectedGameType = type;
     }
 }
