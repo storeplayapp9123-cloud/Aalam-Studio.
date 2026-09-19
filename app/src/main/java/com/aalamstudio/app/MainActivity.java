@@ -1,4 +1,4 @@
-package com.aalamstudio.app;
+package com.aalam.studio;
 
 import android.os.Bundle;
 import android.widget.Button;
