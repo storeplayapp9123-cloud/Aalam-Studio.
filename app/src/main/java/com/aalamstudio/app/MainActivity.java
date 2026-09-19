@@ -1,4 +1,4 @@
-package com.aalam.studio;
+package com.aalamstudio.app;
 
 import android.content.Intent;
 import android.os.Bundle;
