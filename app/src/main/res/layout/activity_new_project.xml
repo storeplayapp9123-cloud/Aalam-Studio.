@@ -1,82 +1,236 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="#0D0D0D"
-    android:padding="24dp">
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="New App Project"
-        android:textColor="#FFFFFF"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="24dp"/>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Project Name"
-        android:textColor="#AAAAAA"
-        android:textSize="13sp"
-        android:layout_marginBottom="6dp"/>
-
-    <EditText
-        android:id="@+id/inputProjectName"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="My Awesome App"
-        android:textColorHint="#555555"
-        android:textColor="#FFFFFF"
-        android:background="#1A1A1A"
-        android:padding="12dp"
-        android:layout_marginBottom="16dp"/>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Package Name"
-        android:textColor="#AAAAAA"
-        android:textSize="13sp"
-        android:layout_marginBottom="6dp"/>
-
-    <EditText
-        android:id="@+id/inputPackageName"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="com.example.myapp"
-        android:textColorHint="#555555"
-        android:textColor="#FFFFFF"
-        android:background="#1A1A1A"
-        android:padding="12dp"
-        android:layout_marginBottom="24dp"/>
+    android:background="#0D0D0D">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:orientation="vertical"
+        android:padding="24dp">
 
-        <Button
-            android:id="@+id/btnCancel"
-            android:layout_width="0dp"
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginEnd="8dp"
-            android:text="Cancel"
-            android:backgroundTint="#333333"
-            android:textColor="#FFFFFF"/>
+            android:text="New Project"
+            android:textColor="#FFFFFF"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="20dp"/>
 
-        <Button
-            android:id="@+id/btnCreateProject"
-            android:layout_width="0dp"
+        <!-- Project Type -->
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Create"
-            android:backgroundTint="#FFD700"
-            android:textColor="#000000"/>
+            android:text="Choose Project Type"
+            android:textColor="#AAAAAA"
+            android:textSize="13sp"
+            android:layout_marginBottom="10dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="24dp">
+
+            <LinearLayout
+                android:id="@+id/typeApp"
+                android:layout_width="0dp"
+                android:layout_height="80dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="@drawable/bg_type_card"
+                android:padding="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="App"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:textStyle="bold"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/typeGame"
+                android:layout_width="0dp"
+                android:layout_height="80dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="@drawable/bg_type_card"
+                android:padding="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Game"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:textStyle="bold"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/type3D"
+                android:layout_width="0dp"
+                android:layout_height="80dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="@drawable/bg_type_card"
+                android:padding="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="3D Experience"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:gravity="center"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/typeTemplate"
+                android:layout_width="0dp"
+                android:layout_height="80dp"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="@drawable/bg_type_card"
+                android:padding="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Template"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:textStyle="bold"/>
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Project Details -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Project Name"
+            android:textColor="#AAAAAA"
+            android:textSize="13sp"
+            android:layout_marginBottom="6dp"/>
+
+        <EditText
+            android:id="@+id/inputProjectName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="My Awesome App"
+            android:textColorHint="#555555"
+            android:textColor="#FFFFFF"
+            android:background="#1A1A1A"
+            android:padding="12dp"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Package Name"
+            android:textColor="#AAAAAA"
+            android:textSize="13sp"
+            android:layout_marginBottom="6dp"/>
+
+        <EditText
+            android:id="@+id/inputPackageName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="com.example.myapp"
+            android:textColorHint="#555555"
+            android:textColor="#FFFFFF"
+            android:background="#1A1A1A"
+            android:padding="12dp"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- Orientation -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Orientation"
+            android:textColor="#AAAAAA"
+            android:textSize="13sp"
+            android:layout_marginBottom="10dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="24dp">
+
+            <LinearLayout
+                android:id="@+id/orientPortrait"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:gravity="center"
+                android:background="@drawable/bg_type_card">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Portrait"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/orientLandscape"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:background="@drawable/bg_type_card">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Landscape"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp"/>
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnCancel"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="Cancel"
+                android:backgroundTint="#333333"
+                android:textColor="#FFFFFF"/>
+
+            <Button
+                android:id="@+id/btnCreateProject"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Create"
+                android:backgroundTint="#FFD700"
+                android:textColor="#000000"/>
+
+        </LinearLayout>
 
     </LinearLayout>
 
-</LinearLayout>
+</ScrollView>
