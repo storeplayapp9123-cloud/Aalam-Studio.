@@ -17,5 +17,10 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".NewProjectActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"/>
+
     </application>
 </manifest>
