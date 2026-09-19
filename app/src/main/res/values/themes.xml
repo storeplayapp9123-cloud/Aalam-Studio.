@@ -3,5 +3,6 @@
     <style name="Theme.AalamStudio" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="colorPrimary">@color/gold</item>
         <item name="android:windowBackground">@color/navy</item>
+        <item name="android:statusBarColor">#0D0D0D</item>
     </style>
 </resources>
