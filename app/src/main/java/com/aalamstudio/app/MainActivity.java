@@ -5,13 +5,14 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
 
-    private LinearLayout panelHome, panelPlaceholder;
+    private ScrollView panelHome;
+    private LinearLayout panelPlaceholder;
     private TextView placeholderTitle;
     private LinearLayout[] navItems;
 
@@ -52,11 +53,17 @@ public class MainActivity extends AppCompatActivity {
         Button btnCreateApp = findViewById(R.id.btnCreateApp);
         Button btnCreateGame = findViewById(R.id.btnCreateGame);
 
-        btnCreateApp.setOnClickListener(v ->
-                startActivity(new Intent(this, NewProjectActivity.class)));
+        btnCreateApp.setOnClickListener(v -> {
+            Intent intent = new Intent(this, NewProjectActivity.class);
+            intent.putExtra(NewProjectActivity.EXTRA_PROJECT_TYPE, "App");
+            startActivity(intent);
+        });
 
-        btnCreateGame.setOnClickListener(v ->
-                Toast.makeText(this, "Create Game - coming soon", Toast.LENGTH_SHORT).show());
+        btnCreateGame.setOnClickListener(v -> {
+            Intent intent = new Intent(this, NewProjectActivity.class);
+            intent.putExtra(NewProjectActivity.EXTRA_PROJECT_TYPE, "Game");
+            startActivity(intent);
+        });
     }
 
     private interface PanelAction {
@@ -70,7 +77,7 @@ public class MainActivity extends AppCompatActivity {
         action.run();
     }
 
-    private void showPanel(LinearLayout panelToShow, String placeholderText) {
+    private void showPanel(View panelToShow, String placeholderText) {
         panelHome.setVisibility(View.GONE);
         panelPlaceholder.setVisibility(View.GONE);
 
