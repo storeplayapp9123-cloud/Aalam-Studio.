@@ -4,48 +4,65 @@ import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class NewProjectActivity extends AppCompatActivity {
 
-    private LinearLayout typeApp, typeGame, type3D, typeTemplate;
-    private LinearLayout orientPortrait, orientLandscape;
-    private LinearLayout[] typeCards;
-    private LinearLayout[] orientCards;
-    private String selectedType = "App";
+    public static final String EXTRA_PROJECT_TYPE = "project_type";
+
+    private String projectType = "App";
     private String selectedOrientation = "Portrait";
+    private String selectedGameType = "2D";
+
+    private LinearLayout orientPortrait, orientLandscape;
+    private LinearLayout game2D, game3D;
+    private LinearLayout[] orientCards;
+    private LinearLayout[] gameTypeCards;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_new_project);
 
+        projectType = getIntent().getStringExtra(EXTRA_PROJECT_TYPE);
+        if (projectType == null) projectType = "App";
+
+        TextView screenTitle = findViewById(R.id.screenTitle);
+        LinearLayout panelAppOptions = findViewById(R.id.panelAppOptions);
+        LinearLayout panelGameOptions = findViewById(R.id.panelGameOptions);
+
         EditText inputProjectName = findViewById(R.id.inputProjectName);
         EditText inputPackageName = findViewById(R.id.inputPackageName);
         Button btnCancel = findViewById(R.id.btnCancel);
         Button btnCreateProject = findViewById(R.id.btnCreateProject);
 
-        typeApp = findViewById(R.id.typeApp);
-        typeGame = findViewById(R.id.typeGame);
-        type3D = findViewById(R.id.type3D);
-        typeTemplate = findViewById(R.id.typeTemplate);
-        typeCards = new LinearLayout[]{typeApp, typeGame, type3D, typeTemplate};
+        if (projectType.equals("Game")) {
+            screenTitle.setText("New Game Project");
+            panelAppOptions.setVisibility(android.view.View.GONE);
+            panelGameOptions.setVisibility(android.view.View.VISIBLE);
+        } else {
+            screenTitle.setText("New App Project");
+            panelAppOptions.setVisibility(android.view.View.VISIBLE);
+            panelGameOptions.setVisibility(android.view.View.GONE);
+        }
 
         orientPortrait = findViewById(R.id.orientPortrait);
         orientLandscape = findViewById(R.id.orientLandscape);
         orientCards = new LinearLayout[]{orientPortrait, orientLandscape};
 
-        typeApp.setOnClickListener(v -> selectType(typeApp, "App"));
-        typeGame.setOnClickListener(v -> selectType(typeGame, "Game"));
-        type3D.setOnClickListener(v -> selectType(type3D, "3D Experience"));
-        typeTemplate.setOnClickListener(v -> selectType(typeTemplate, "Template"));
+        game2D = findViewById(R.id.game2D);
+        game3D = findViewById(R.id.game3D);
+        gameTypeCards = new LinearLayout[]{game2D, game3D};
 
         orientPortrait.setOnClickListener(v -> selectOrientation(orientPortrait, "Portrait"));
         orientLandscape.setOnClickListener(v -> selectOrientation(orientLandscape, "Landscape"));
-
-        selectType(typeApp, "App");
         selectOrientation(orientPortrait, "Portrait");
+
+        game2D.setOnClickListener(v -> selectGameType(game2D, "2D"));
+        game3D.setOnClickListener(v -> selectGameType(game3D, "3D"));
+        selectGameType(game2D, "2D");
 
         btnCancel.setOnClickListener(v -> finish());
 
@@ -62,18 +79,12 @@ public class NewProjectActivity extends AppCompatActivity {
                 return;
             }
 
+            String extraInfo = projectType.equals("Game") ? selectedGameType : selectedOrientation;
             Toast.makeText(this,
-                    selectedType + " '" + name + "' (" + selectedOrientation + ") created!",
+                    projectType + " '" + name + "' (" + extraInfo + ") created!",
                     Toast.LENGTH_LONG).show();
             finish();
         });
-    }
-
-    private void selectType(LinearLayout selected, String type) {
-        for (LinearLayout card : typeCards) {
-            card.setSelected(card == selected);
-        }
-        selectedType = type;
     }
 
     private void selectOrientation(LinearLayout selected, String orientation) {
@@ -81,5 +92,12 @@ public class NewProjectActivity extends AppCompatActivity {
             card.setSelected(card == selected);
         }
         selectedOrientation = orientation;
+    }
+
+    private void selectGameType(LinearLayout selected, String type) {
+        for (LinearLayout card : gameTypeCards) {
+            card.setSelected(card == selected);
+        }
+        selectedGameType = type;
     }
 }
