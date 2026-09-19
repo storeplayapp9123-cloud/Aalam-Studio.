@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace 'com.aalam.studio'
+    namespace 'com.aalamstudio.app'
     compileSdk 34
 
     defaultConfig {
