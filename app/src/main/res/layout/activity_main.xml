@@ -23,75 +23,112 @@
             android:layout_marginBottom="20dp"/>
 
         <LinearLayout android:id="@+id/navHome" style="@style/SidebarRow">
-            <TextView style="@style/SidebarLabel" android:text="@string/nav_home"/>
+            <TextView android:id="@+id/labelHome" style="@style/SidebarLabel" android:text="@string/nav_home"/>
         </LinearLayout>
         <LinearLayout android:id="@+id/navProjects" style="@style/SidebarRow">
-            <TextView style="@style/SidebarLabel" android:text="@string/nav_projects"/>
+            <TextView android:id="@+id/labelProjects" style="@style/SidebarLabel" android:text="@string/nav_projects"/>
         </LinearLayout>
         <LinearLayout android:id="@+id/navTemplates" style="@style/SidebarRow">
-            <TextView style="@style/SidebarLabel" android:text="@string/nav_templates"/>
+            <TextView android:id="@+id/labelTemplates" style="@style/SidebarLabel" android:text="@string/nav_templates"/>
         </LinearLayout>
         <LinearLayout android:id="@+id/navAssets" style="@style/SidebarRow">
-            <TextView style="@style/SidebarLabel" android:text="@string/nav_assets"/>
+            <TextView android:id="@+id/labelAssets" style="@style/SidebarLabel" android:text="@string/nav_assets"/>
         </LinearLayout>
         <LinearLayout android:id="@+id/navTutorials" style="@style/SidebarRow">
-            <TextView style="@style/SidebarLabel" android:text="@string/nav_tutorials"/>
+            <TextView android:id="@+id/labelTutorials" style="@style/SidebarLabel" android:text="@string/nav_tutorials"/>
         </LinearLayout>
         <LinearLayout android:id="@+id/navCommunity" style="@style/SidebarRow">
-            <TextView style="@style/SidebarLabel" android:text="@string/nav_community"/>
+            <TextView android:id="@+id/labelCommunity" style="@style/SidebarLabel" android:text="@string/nav_community"/>
         </LinearLayout>
         <LinearLayout android:id="@+id/navTools" style="@style/SidebarRow">
-            <TextView style="@style/SidebarLabel" android:text="@string/nav_tools"/>
+            <TextView android:id="@+id/labelTools" style="@style/SidebarLabel" android:text="@string/nav_tools"/>
         </LinearLayout>
         <LinearLayout android:id="@+id/navSettings" style="@style/SidebarRow">
-            <TextView style="@style/SidebarLabel" android:text="@string/nav_settings"/>
+            <TextView android:id="@+id/labelSettings" style="@style/SidebarLabel" android:text="@string/nav_settings"/>
         </LinearLayout>
 
     </LinearLayout>
 
-    <!-- Main content -->
-    <LinearLayout
+    <!-- Main content area: har section ka apna panel, ek waqt me ek hi visible -->
+    <FrameLayout
         android:layout_width="0dp"
         android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:padding="20dp">
+        android:layout_weight="1">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/welcome_title"
-            android:textColor="#FFFFFF"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="16dp"/>
-
+        <!-- Home panel -->
         <LinearLayout
+            android:id="@+id/panelHome"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:padding="20dp"
+            android:visibility="visible">
 
-            <Button
-                android:id="@+id/btnCreateApp"
-                android:layout_width="0dp"
+            <TextView
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="8dp"
-                android:text="@string/create_app"
-                android:backgroundTint="#FFD700"
-                android:textColor="#000000"/>
+                android:text="@string/welcome_title"
+                android:textColor="#FFFFFF"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="16dp"/>
 
-            <Button
-                android:id="@+id/btnCreateGame"
-                android:layout_width="0dp"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/create_game"
-                android:backgroundTint="#FFD700"
-                android:textColor="#000000"/>
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnCreateApp"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/create_app"
+                    android:backgroundTint="#FFD700"
+                    android:textColor="#000000"/>
+
+                <Button
+                    android:id="@+id/btnCreateGame"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/create_game"
+                    android:backgroundTint="#FFD700"
+                    android:textColor="#000000"/>
+
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Generic placeholder panel for other sections -->
+        <LinearLayout
+            android:id="@+id/panelPlaceholder"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="20dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/placeholderTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Projects"
+                android:textColor="#FFFFFF"
+                android:textSize="22sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Coming soon"
+                android:textColor="#888888"
+                android:textSize="14sp"/>
 
         </LinearLayout>
 
-    </LinearLayout>
+    </FrameLayout>
 
 </LinearLayout>
