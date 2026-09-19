@@ -2,133 +2,81 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="horizontal"
-    android:background="#0D0D0D">
+    android:orientation="vertical"
+    android:background="#0D0D0D"
+    android:padding="24dp">
 
-    <!-- Sidebar -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="New App Project"
+        android:textColor="#FFFFFF"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="24dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Project Name"
+        android:textColor="#AAAAAA"
+        android:textSize="13sp"
+        android:layout_marginBottom="6dp"/>
+
+    <EditText
+        android:id="@+id/inputProjectName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="My Awesome App"
+        android:textColorHint="#555555"
+        android:textColor="#FFFFFF"
+        android:background="#1A1A1A"
+        android:padding="12dp"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Package Name"
+        android:textColor="#AAAAAA"
+        android:textSize="13sp"
+        android:layout_marginBottom="6dp"/>
+
+    <EditText
+        android:id="@+id/inputPackageName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="com.example.myapp"
+        android:textColorHint="#555555"
+        android:textColor="#FFFFFF"
+        android:background="#1A1A1A"
+        android:padding="12dp"
+        android:layout_marginBottom="24dp"/>
+
     <LinearLayout
-        android:layout_width="180dp"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:background="#161616"
-        android:padding="12dp">
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
 
-        <TextView
-            android:layout_width="wrap_content"
+        <Button
+            android:id="@+id/btnCancel"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="AALAM"
-            android:textColor="#FFD700"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="20dp"/>
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="Cancel"
+            android:backgroundTint="#333333"
+            android:textColor="#FFFFFF"/>
 
-        <LinearLayout android:id="@+id/navHome" style="@style/SidebarRow">
-            <TextView android:id="@+id/labelHome" style="@style/SidebarLabel" android:text="@string/nav_home"/>
-        </LinearLayout>
-        <LinearLayout android:id="@+id/navProjects" style="@style/SidebarRow">
-            <TextView android:id="@+id/labelProjects" style="@style/SidebarLabel" android:text="@string/nav_projects"/>
-        </LinearLayout>
-        <LinearLayout android:id="@+id/navTemplates" style="@style/SidebarRow">
-            <TextView android:id="@+id/labelTemplates" style="@style/SidebarLabel" android:text="@string/nav_templates"/>
-        </LinearLayout>
-        <LinearLayout android:id="@+id/navAssets" style="@style/SidebarRow">
-            <TextView android:id="@+id/labelAssets" style="@style/SidebarLabel" android:text="@string/nav_assets"/>
-        </LinearLayout>
-        <LinearLayout android:id="@+id/navTutorials" style="@style/SidebarRow">
-            <TextView android:id="@+id/labelTutorials" style="@style/SidebarLabel" android:text="@string/nav_tutorials"/>
-        </LinearLayout>
-        <LinearLayout android:id="@+id/navCommunity" style="@style/SidebarRow">
-            <TextView android:id="@+id/labelCommunity" style="@style/SidebarLabel" android:text="@string/nav_community"/>
-        </LinearLayout>
-        <LinearLayout android:id="@+id/navTools" style="@style/SidebarRow">
-            <TextView android:id="@+id/labelTools" style="@style/SidebarLabel" android:text="@string/nav_tools"/>
-        </LinearLayout>
-        <LinearLayout android:id="@+id/navSettings" style="@style/SidebarRow">
-            <TextView android:id="@+id/labelSettings" style="@style/SidebarLabel" android:text="@string/nav_settings"/>
-        </LinearLayout>
+        <Button
+            android:id="@+id/btnCreateProject"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Create"
+            android:backgroundTint="#FFD700"
+            android:textColor="#000000"/>
 
     </LinearLayout>
-
-    <!-- Main content area: har section ka apna panel, ek waqt me ek hi visible -->
-    <FrameLayout
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="1">
-
-        <!-- Home panel -->
-        <LinearLayout
-            android:id="@+id/panelHome"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:padding="20dp"
-            android:visibility="visible">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/welcome_title"
-                android:textColor="#FFFFFF"
-                android:textSize="22sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="16dp"/>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <Button
-                    android:id="@+id/btnCreateApp"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="8dp"
-                    android:text="@string/create_app"
-                    android:backgroundTint="#FFD700"
-                    android:textColor="#000000"/>
-
-                <Button
-                    android:id="@+id/btnCreateGame"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/create_game"
-                    android:backgroundTint="#FFD700"
-                    android:textColor="#000000"/>
-
-            </LinearLayout>
-        </LinearLayout>
-
-        <!-- Generic placeholder panel for other sections -->
-        <LinearLayout
-            android:id="@+id/panelPlaceholder"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:padding="20dp"
-            android:visibility="gone">
-
-            <TextView
-                android:id="@+id/placeholderTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Projects"
-                android:textColor="#FFFFFF"
-                android:textSize="22sp"
-                android:textStyle="bold"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Coming soon"
-                android:textColor="#888888"
-                android:textSize="14sp"/>
-
-        </LinearLayout>
-
-    </FrameLayout>
 
 </LinearLayout>
