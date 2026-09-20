@@ -81,7 +81,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="/AalamStudio/Projects/"
-                android:textColor="#777777"
+                android:textColor="#AAAAAA"
                 android:textSize="12sp"
                 android:background="#1A1A1A"
                 android:padding="10dp"/>
@@ -209,7 +209,6 @@
 
                 </LinearLayout>
 
-                <!-- Orientation, only shown for 2D games -->
                 <LinearLayout
                     android:id="@+id/gameOrientationContainer"
                     android:layout_width="match_parent"
@@ -266,7 +265,6 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- Shown for 3D games instead -->
                 <TextView
                     android:id="@+id/gameOrientationLockedText"
                     android:layout_width="wrap_content"
