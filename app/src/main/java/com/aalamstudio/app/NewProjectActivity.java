@@ -53,12 +53,12 @@ public class NewProjectActivity extends AppCompatActivity {
             screenTitle.setText("New Game Project");
             panelAppOptions.setVisibility(View.GONE);
             panelGameOptions.setVisibility(View.VISIBLE);
-            updateLocationPath("Games", inputProjectName.getText().toString());
+            updateLocationPath("Games", "");
         } else {
             screenTitle.setText("New App Project");
             panelAppOptions.setVisibility(View.VISIBLE);
             panelGameOptions.setVisibility(View.GONE);
-            updateLocationPath("Apps", inputProjectName.getText().toString());
+            updateLocationPath("Apps", "");
         }
 
         inputProjectName.addTextChangedListener(new TextWatcher() {
@@ -130,7 +130,9 @@ public class NewProjectActivity extends AppCompatActivity {
     }
 
     private void updateLocationPath(String folder, String projectName) {
-        String safeName = projectName.trim().isEmpty() ? "" : projectName.trim().replace(" ", "_");
+        String safeName = projectName.trim().isEmpty()
+                ? "your-project-name"
+                : projectName.trim().replace(" ", "_");
         locationPath.setText("/AalamStudio/Projects/" + folder + "/" + safeName);
     }
 
