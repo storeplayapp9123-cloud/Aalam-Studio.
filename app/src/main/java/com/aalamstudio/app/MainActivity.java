@@ -3,11 +3,13 @@ package com.aalamstudio.app;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -15,6 +17,10 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout panelPlaceholder;
     private TextView placeholderTitle;
     private LinearLayout[] navItems;
+
+    private TextView statTotalProjects, statGames, statApps, statAssets;
+    private LinearLayout recentProjectsContainer;
+    private TextView emptyProjectsText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -24,6 +30,13 @@ public class MainActivity extends AppCompatActivity {
         panelHome = findViewById(R.id.panelHome);
         panelPlaceholder = findViewById(R.id.panelPlaceholder);
         placeholderTitle = findViewById(R.id.placeholderTitle);
+
+        statTotalProjects = findViewById(R.id.statTotalProjects);
+        statGames = findViewById(R.id.statGames);
+        statApps = findViewById(R.id.statApps);
+        statAssets = findViewById(R.id.statAssets);
+        recentProjectsContainer = findViewById(R.id.recentProjectsContainer);
+        emptyProjectsText = findViewById(R.id.emptyProjectsText);
 
         LinearLayout navHome = findViewById(R.id.navHome);
         LinearLayout navProjects = findViewById(R.id.navProjects);
@@ -64,6 +77,88 @@ public class MainActivity extends AppCompatActivity {
             intent.putExtra(NewProjectActivity.EXTRA_PROJECT_TYPE, "Game");
             startActivity(intent);
         });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        refreshDashboard();
+    }
+
+    private void refreshDashboard() {
+        int totalApps = ProjectStore.countByType(this, "App");
+        int totalGames = ProjectStore.countByType(this, "Game");
+        int total = totalApps + totalGames;
+
+        statTotalProjects.setText(String.valueOf(total));
+        statGames.setText(String.valueOf(totalGames));
+        statApps.setText(String.valueOf(totalApps));
+        statAssets.setText("0");
+
+        List<Project> recent = ProjectStore.getRecentProjects(this, 6);
+
+        recentProjectsContainer.removeAllViews();
+
+        if (recent.isEmpty()) {
+            recentProjectsContainer.addView(emptyProjectsText);
+        } else {
+            for (Project p : recent) {
+                recentProjectsContainer.addView(buildProjectCard(p));
+            }
+        }
+    }
+
+    private View buildProjectCard(Project p) {
+        LinearLayout card = new LinearLayout(this);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(160), ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.setMarginEnd(dp(12));
+        card.setLayoutParams(params);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackgroundResource(R.drawable.bg_card);
+        card.setPadding(dp(12), dp(12), dp(12), dp(12));
+
+        TextView name = new TextView(this);
+        name.setText(p.name);
+        name.setTextColor(0xFFFFFFFF);
+        name.setTextSize(14);
+        name.setTypeface(null, android.graphics.Typeface.BOLD);
+
+        TextView type = new TextView(this);
+        type.setText(p.type + " Project");
+        type.setTextColor(0xFF999999);
+        type.setTextSize(11);
+        LinearLayout.LayoutParams typeParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        typeParams.topMargin = dp(2);
+        type.setLayoutParams(typeParams);
+
+        TextView updated = new TextView(this);
+        updated.setText(timeAgo(p.timestamp));
+        updated.setTextColor(0xFF999999);
+        updated.setTextSize(11);
+
+        card.addView(name);
+        card.addView(type);
+        card.addView(updated);
+
+        return card;
+    }
+
+    private int dp(int value) {
+        float density = getResources().getDisplayMetrics().density;
+        return Math.round(value * density);
+    }
+
+    private String timeAgo(long timestamp) {
+        long diff = System.currentTimeMillis() - timestamp;
+        long minutes = diff / (60 * 1000);
+        long hours = minutes / 60;
+        long days = hours / 24;
+
+        if (minutes < 1) return "Just now";
+        if (minutes < 60) return "Updated " + minutes + "m ago";
+        if (hours < 24) return "Updated " + hours + "h ago";
+        return "Updated " + days + "d ago";
     }
 
     private interface PanelAction {
