@@ -65,6 +65,25 @@
                 android:textColorHint="#555555"
                 android:textColor="#FFFFFF"
                 android:background="#1A1A1A"
+                android:padding="10dp"
+                android:layout_marginBottom="14dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Save Location"
+                android:textColor="#AAAAAA"
+                android:textSize="13sp"
+                android:layout_marginBottom="6dp"/>
+
+            <TextView
+                android:id="@+id/locationPath"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="/AalamStudio/Projects/"
+                android:textColor="#777777"
+                android:textSize="12sp"
+                android:background="#1A1A1A"
                 android:padding="10dp"/>
 
         </LinearLayout>
@@ -152,7 +171,8 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="16dp">
 
                     <LinearLayout
                         android:id="@+id/game2D"
@@ -188,6 +208,74 @@
                     </LinearLayout>
 
                 </LinearLayout>
+
+                <!-- Orientation, only shown for 2D games -->
+                <LinearLayout
+                    android:id="@+id/gameOrientationContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="visible">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Orientation"
+                        android:textColor="#AAAAAA"
+                        android:textSize="13sp"
+                        android:layout_marginBottom="8dp"/>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <LinearLayout
+                            android:id="@+id/gameOrientPortrait"
+                            android:layout_width="0dp"
+                            android:layout_height="42dp"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="8dp"
+                            android:gravity="center"
+                            android:background="@drawable/bg_type_card">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Portrait"
+                                android:textColor="#FFFFFF"
+                                android:textSize="13sp"/>
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:id="@+id/gameOrientLandscape"
+                            android:layout_width="0dp"
+                            android:layout_height="42dp"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:background="@drawable/bg_type_card">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Landscape"
+                                android:textColor="#FFFFFF"
+                                android:textSize="13sp"/>
+                        </LinearLayout>
+
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Shown for 3D games instead -->
+                <TextView
+                    android:id="@+id/gameOrientationLockedText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Orientation: Landscape (fixed for 3D)"
+                    android:textColor="#777777"
+                    android:textSize="12sp"
+                    android:visibility="gone"/>
+
             </LinearLayout>
 
         </LinearLayout>
