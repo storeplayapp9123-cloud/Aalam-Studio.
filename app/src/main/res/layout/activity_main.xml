@@ -23,27 +23,35 @@
             android:layout_marginBottom="20dp"/>
 
         <LinearLayout android:id="@+id/navHome" style="@style/SidebarRow">
+            <TextView style="@style/SidebarIcon" android:text="🏠"/>
             <TextView android:id="@+id/labelHome" style="@style/SidebarLabel" android:text="@string/nav_home"/>
         </LinearLayout>
         <LinearLayout android:id="@+id/navProjects" style="@style/SidebarRow">
+            <TextView style="@style/SidebarIcon" android:text="📁"/>
             <TextView android:id="@+id/labelProjects" style="@style/SidebarLabel" android:text="@string/nav_projects"/>
         </LinearLayout>
         <LinearLayout android:id="@+id/navTemplates" style="@style/SidebarRow">
+            <TextView style="@style/SidebarIcon" android:text="🧩"/>
             <TextView android:id="@+id/labelTemplates" style="@style/SidebarLabel" android:text="@string/nav_templates"/>
         </LinearLayout>
         <LinearLayout android:id="@+id/navAssets" style="@style/SidebarRow">
+            <TextView style="@style/SidebarIcon" android:text="🖼️"/>
             <TextView android:id="@+id/labelAssets" style="@style/SidebarLabel" android:text="@string/nav_assets"/>
         </LinearLayout>
         <LinearLayout android:id="@+id/navTutorials" style="@style/SidebarRow">
+            <TextView style="@style/SidebarIcon" android:text="🎓"/>
             <TextView android:id="@+id/labelTutorials" style="@style/SidebarLabel" android:text="@string/nav_tutorials"/>
         </LinearLayout>
         <LinearLayout android:id="@+id/navCommunity" style="@style/SidebarRow">
+            <TextView style="@style/SidebarIcon" android:text="👥"/>
             <TextView android:id="@+id/labelCommunity" style="@style/SidebarLabel" android:text="@string/nav_community"/>
         </LinearLayout>
         <LinearLayout android:id="@+id/navTools" style="@style/SidebarRow">
+            <TextView style="@style/SidebarIcon" android:text="🛠️"/>
             <TextView android:id="@+id/labelTools" style="@style/SidebarLabel" android:text="@string/nav_tools"/>
         </LinearLayout>
         <LinearLayout android:id="@+id/navSettings" style="@style/SidebarRow">
+            <TextView style="@style/SidebarIcon" android:text="⚙️"/>
             <TextView android:id="@+id/labelSettings" style="@style/SidebarLabel" android:text="@string/nav_settings"/>
         </LinearLayout>
 
@@ -68,7 +76,6 @@
                 android:orientation="vertical"
                 android:padding="20dp">
 
-                <!-- Header -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -85,7 +92,6 @@
                     android:textStyle="bold"
                     android:layout_marginBottom="16dp"/>
 
-                <!-- Two big create cards -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -167,7 +173,6 @@
 
                 </LinearLayout>
 
-                <!-- Projects Overview stats -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -205,7 +210,6 @@
 
                 </LinearLayout>
 
-                <!-- Recent Projects -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -238,7 +242,6 @@
                     </LinearLayout>
                 </HorizontalScrollView>
 
-                <!-- Tools & Resources -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
