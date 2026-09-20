@@ -6,56 +6,92 @@
     android:background="#0D0D0D">
 
     <!-- Sidebar -->
-    <LinearLayout
+    <ScrollView
         android:layout_width="180dp"
         android:layout_height="match_parent"
-        android:orientation="vertical"
         android:background="#161616"
-        android:padding="12dp">
+        android:scrollbars="none">
 
-        <TextView
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="AALAM"
-            android:textColor="#FFD700"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="20dp"/>
+            android:orientation="vertical"
+            android:padding="12dp">
 
-        <LinearLayout android:id="@+id/navHome" style="@style/SidebarRow">
-            <TextView style="@style/SidebarIcon" android:text="🏠"/>
-            <TextView android:id="@+id/labelHome" style="@style/SidebarLabel" android:text="@string/nav_home"/>
-        </LinearLayout>
-        <LinearLayout android:id="@+id/navProjects" style="@style/SidebarRow">
-            <TextView style="@style/SidebarIcon" android:text="📁"/>
-            <TextView android:id="@+id/labelProjects" style="@style/SidebarLabel" android:text="@string/nav_projects"/>
-        </LinearLayout>
-        <LinearLayout android:id="@+id/navTemplates" style="@style/SidebarRow">
-            <TextView style="@style/SidebarIcon" android:text="🧩"/>
-            <TextView android:id="@+id/labelTemplates" style="@style/SidebarLabel" android:text="@string/nav_templates"/>
-        </LinearLayout>
-        <LinearLayout android:id="@+id/navAssets" style="@style/SidebarRow">
-            <TextView style="@style/SidebarIcon" android:text="🖼️"/>
-            <TextView android:id="@+id/labelAssets" style="@style/SidebarLabel" android:text="@string/nav_assets"/>
-        </LinearLayout>
-        <LinearLayout android:id="@+id/navTutorials" style="@style/SidebarRow">
-            <TextView style="@style/SidebarIcon" android:text="🎓"/>
-            <TextView android:id="@+id/labelTutorials" style="@style/SidebarLabel" android:text="@string/nav_tutorials"/>
-        </LinearLayout>
-        <LinearLayout android:id="@+id/navCommunity" style="@style/SidebarRow">
-            <TextView style="@style/SidebarIcon" android:text="👥"/>
-            <TextView android:id="@+id/labelCommunity" style="@style/SidebarLabel" android:text="@string/nav_community"/>
-        </LinearLayout>
-        <LinearLayout android:id="@+id/navTools" style="@style/SidebarRow">
-            <TextView style="@style/SidebarIcon" android:text="🛠️"/>
-            <TextView android:id="@+id/labelTools" style="@style/SidebarLabel" android:text="@string/nav_tools"/>
-        </LinearLayout>
-        <LinearLayout android:id="@+id/navSettings" style="@style/SidebarRow">
-            <TextView style="@style/SidebarIcon" android:text="⚙️"/>
-            <TextView android:id="@+id/labelSettings" style="@style/SidebarLabel" android:text="@string/nav_settings"/>
+            <!-- Header row with collapse toggle -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="AALAM"
+                    android:textColor="#FFD700"
+                    android:textSize="18sp"
+                    android:textStyle="bold"/>
+
+                <TextView
+                    android:id="@+id/toggleSidebar"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="▾"
+                    android:textColor="#FFD700"
+                    android:textSize="18sp"
+                    android:padding="6dp"/>
+
+            </LinearLayout>
+
+            <!-- Collapsible nav list -->
+            <LinearLayout
+                android:id="@+id/navListContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="visible">
+
+                <LinearLayout android:id="@+id/navHome" style="@style/SidebarRow">
+                    <ImageView style="@style/SidebarIcon" android:src="@drawable/ic_home"/>
+                    <TextView android:id="@+id/labelHome" style="@style/SidebarLabel" android:text="@string/nav_home"/>
+                </LinearLayout>
+                <LinearLayout android:id="@+id/navProjects" style="@style/SidebarRow">
+                    <ImageView style="@style/SidebarIcon" android:src="@drawable/ic_folder"/>
+                    <TextView android:id="@+id/labelProjects" style="@style/SidebarLabel" android:text="@string/nav_projects"/>
+                </LinearLayout>
+                <LinearLayout android:id="@+id/navTemplates" style="@style/SidebarRow">
+                    <ImageView style="@style/SidebarIcon" android:src="@drawable/ic_templates"/>
+                    <TextView android:id="@+id/labelTemplates" style="@style/SidebarLabel" android:text="@string/nav_templates"/>
+                </LinearLayout>
+                <LinearLayout android:id="@+id/navAssets" style="@style/SidebarRow">
+                    <ImageView style="@style/SidebarIcon" android:src="@drawable/ic_assets"/>
+                    <TextView android:id="@+id/labelAssets" style="@style/SidebarLabel" android:text="@string/nav_assets"/>
+                </LinearLayout>
+                <LinearLayout android:id="@+id/navTutorials" style="@style/SidebarRow">
+                    <ImageView style="@style/SidebarIcon" android:src="@drawable/ic_tutorials"/>
+                    <TextView android:id="@+id/labelTutorials" style="@style/SidebarLabel" android:text="@string/nav_tutorials"/>
+                </LinearLayout>
+                <LinearLayout android:id="@+id/navCommunity" style="@style/SidebarRow">
+                    <ImageView style="@style/SidebarIcon" android:src="@drawable/ic_community"/>
+                    <TextView android:id="@+id/labelCommunity" style="@style/SidebarLabel" android:text="@string/nav_community"/>
+                </LinearLayout>
+                <LinearLayout android:id="@+id/navTools" style="@style/SidebarRow">
+                    <ImageView style="@style/SidebarIcon" android:src="@drawable/ic_tools"/>
+                    <TextView android:id="@+id/labelTools" style="@style/SidebarLabel" android:text="@string/nav_tools"/>
+                </LinearLayout>
+                <LinearLayout android:id="@+id/navSettings" style="@style/SidebarRow">
+                    <ImageView style="@style/SidebarIcon" android:src="@drawable/ic_settings"/>
+                    <TextView android:id="@+id/labelSettings" style="@style/SidebarLabel" android:text="@string/nav_settings"/>
+                </LinearLayout>
+
+            </LinearLayout>
+
         </LinearLayout>
 
-    </LinearLayout>
+    </ScrollView>
 
     <!-- Main content area -->
     <FrameLayout
