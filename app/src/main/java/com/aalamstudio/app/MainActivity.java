@@ -18,6 +18,10 @@ public class MainActivity extends AppCompatActivity {
     private TextView placeholderTitle;
     private LinearLayout[] navItems;
 
+    private LinearLayout navListContainer;
+    private TextView toggleSidebar;
+    private boolean sidebarExpanded = true;
+
     private TextView statTotalProjects, statGames, statApps, statAssets;
     private LinearLayout recentProjectsContainer;
     private TextView emptyProjectsText;
@@ -51,6 +55,15 @@ public class MainActivity extends AppCompatActivity {
                 navHome, navProjects, navTemplates, navAssets,
                 navTutorials, navCommunity, navTools, navSettings
         };
+
+        navListContainer = findViewById(R.id.navListContainer);
+        toggleSidebar = findViewById(R.id.toggleSidebar);
+
+        toggleSidebar.setOnClickListener(v -> {
+            sidebarExpanded = !sidebarExpanded;
+            navListContainer.setVisibility(sidebarExpanded ? View.VISIBLE : View.GONE);
+            toggleSidebar.setText(sidebarExpanded ? "▾" : "▸");
+        });
 
         navHome.setOnClickListener(v -> selectNav(navHome, () -> showPanel(panelHome, null)));
         navProjects.setOnClickListener(v -> selectNav(navProjects, () -> showPanel(panelPlaceholder, "Projects")));
