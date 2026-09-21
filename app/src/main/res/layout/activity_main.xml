@@ -7,6 +7,7 @@
 
     <!-- Sidebar -->
     <ScrollView
+        android:id="@+id/sidebarScroll"
         android:layout_width="180dp"
         android:layout_height="match_parent"
         android:background="#161616"
@@ -18,7 +19,6 @@
             android:orientation="vertical"
             android:padding="12dp">
 
-            <!-- Header row with collapse toggle -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -46,7 +46,6 @@
 
             </LinearLayout>
 
-            <!-- Collapsible nav list -->
             <LinearLayout
                 android:id="@+id/navListContainer"
                 android:layout_width="match_parent"
@@ -107,64 +106,67 @@
             android:visibility="visible">
 
             <LinearLayout
+                android:id="@+id/homeContent"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="20dp">
+                android:padding="14dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Welcome Back,"
                     android:textColor="@color/text_secondary"
-                    android:textSize="13sp"/>
+                    android:textSize="11sp"/>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Creator 👋"
                     android:textColor="@color/gold"
-                    android:textSize="26sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
-                    android:layout_marginBottom="16dp"/>
+                    android:layout_marginBottom="10dp"/>
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:layout_marginBottom="20dp">
+                    android:layout_marginBottom="12dp">
 
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:layout_marginEnd="8dp"
+                        android:layout_marginEnd="6dp"
                         android:orientation="vertical"
                         android:background="@drawable/bg_card"
-                        android:padding="16dp">
+                        android:padding="10dp">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Create Game"
                             android:textColor="@color/gold"
-                            android:textSize="17sp"
+                            android:textSize="13sp"
                             android:textStyle="bold"/>
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:layout_marginBottom="12dp"
+                            android:layout_marginTop="2dp"
+                            android:layout_marginBottom="8dp"
                             android:text="Build your own amazing game"
                             android:textColor="@color/text_secondary"
-                            android:textSize="12sp"/>
+                            android:textSize="10sp"/>
 
                         <Button
                             android:id="@+id/btnCreateGame"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
+                            android:layout_height="34dp"
+                            android:minHeight="0dp"
                             android:text="Start Creating"
+                            android:textSize="11sp"
                             android:textAllCaps="false"
                             android:backgroundTint="@color/gold"
                             android:textColor="#000000"/>
@@ -177,30 +179,32 @@
                         android:layout_weight="1"
                         android:orientation="vertical"
                         android:background="@drawable/bg_card"
-                        android:padding="16dp">
+                        android:padding="10dp">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Create App"
                             android:textColor="@color/gold"
-                            android:textSize="17sp"
+                            android:textSize="13sp"
                             android:textStyle="bold"/>
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:layout_marginBottom="12dp"
-                            android:text="Design and build your own application"
+                            android:layout_marginTop="2dp"
+                            android:layout_marginBottom="8dp"
+                            android:text="Design and build your own app"
                             android:textColor="@color/text_secondary"
-                            android:textSize="12sp"/>
+                            android:textSize="10sp"/>
 
                         <Button
                             android:id="@+id/btnCreateApp"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
+                            android:layout_height="34dp"
+                            android:minHeight="0dp"
                             android:text="Start Creating"
+                            android:textSize="11sp"
                             android:textAllCaps="false"
                             android:backgroundTint="@color/gold"
                             android:textColor="#000000"/>
@@ -214,34 +218,34 @@
                     android:layout_height="wrap_content"
                     android:text="Projects Overview"
                     android:textColor="@color/text_primary"
-                    android:textSize="15sp"
+                    android:textSize="12sp"
                     android:textStyle="bold"
-                    android:layout_marginBottom="10dp"/>
+                    android:layout_marginBottom="6dp"/>
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:layout_marginBottom="20dp">
+                    android:layout_marginBottom="12dp">
 
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginEnd="6dp" android:orientation="vertical" android:background="@drawable/bg_stat_card" android:padding="12dp">
-                        <TextView android:id="@+id/statTotalProjects" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/text_primary" android:textSize="20sp" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Total Projects" android:textColor="@color/text_secondary" android:textSize="11sp"/>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginEnd="4dp" android:orientation="vertical" android:background="@drawable/bg_stat_card" android:padding="8dp">
+                        <TextView android:id="@+id/statTotalProjects" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/text_primary" android:textSize="15sp" android:textStyle="bold"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Total" android:textColor="@color/text_secondary" android:textSize="9sp"/>
                     </LinearLayout>
 
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginEnd="6dp" android:orientation="vertical" android:background="@drawable/bg_stat_card" android:padding="12dp">
-                        <TextView android:id="@+id/statGames" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/text_primary" android:textSize="20sp" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Games" android:textColor="@color/text_secondary" android:textSize="11sp"/>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginEnd="4dp" android:orientation="vertical" android:background="@drawable/bg_stat_card" android:padding="8dp">
+                        <TextView android:id="@+id/statGames" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/text_primary" android:textSize="15sp" android:textStyle="bold"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Games" android:textColor="@color/text_secondary" android:textSize="9sp"/>
                     </LinearLayout>
 
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginEnd="6dp" android:orientation="vertical" android:background="@drawable/bg_stat_card" android:padding="12dp">
-                        <TextView android:id="@+id/statApps" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/text_primary" android:textSize="20sp" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Apps" android:textColor="@color/text_secondary" android:textSize="11sp"/>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginEnd="4dp" android:orientation="vertical" android:background="@drawable/bg_stat_card" android:padding="8dp">
+                        <TextView android:id="@+id/statApps" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/text_primary" android:textSize="15sp" android:textStyle="bold"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Apps" android:textColor="@color/text_secondary" android:textSize="9sp"/>
                     </LinearLayout>
 
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:background="@drawable/bg_stat_card" android:padding="12dp">
-                        <TextView android:id="@+id/statAssets" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/text_primary" android:textSize="20sp" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Assets" android:textColor="@color/text_secondary" android:textSize="11sp"/>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:background="@drawable/bg_stat_card" android:padding="8dp">
+                        <TextView android:id="@+id/statAssets" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/text_primary" android:textSize="15sp" android:textStyle="bold"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Assets" android:textColor="@color/text_secondary" android:textSize="9sp"/>
                     </LinearLayout>
 
                 </LinearLayout>
@@ -251,15 +255,15 @@
                     android:layout_height="wrap_content"
                     android:text="Recent Projects"
                     android:textColor="@color/text_primary"
-                    android:textSize="15sp"
+                    android:textSize="12sp"
                     android:textStyle="bold"
-                    android:layout_marginBottom="10dp"/>
+                    android:layout_marginBottom="6dp"/>
 
                 <HorizontalScrollView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:scrollbars="none"
-                    android:layout_marginBottom="20dp">
+                    android:layout_marginBottom="12dp">
 
                     <LinearLayout
                         android:id="@+id/recentProjectsContainer"
@@ -271,9 +275,9 @@
                             android:id="@+id/emptyProjectsText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="No projects yet — tap Create App or Create Game to start"
+                            android:text="No projects yet"
                             android:textColor="@color/text_secondary"
-                            android:textSize="12sp"/>
+                            android:textSize="10sp"/>
 
                     </LinearLayout>
                 </HorizontalScrollView>
@@ -283,33 +287,33 @@
                     android:layout_height="wrap_content"
                     android:text="Tools &amp; Resources"
                     android:textColor="@color/text_primary"
-                    android:textSize="15sp"
+                    android:textSize="12sp"
                     android:textStyle="bold"
-                    android:layout_marginBottom="10dp"/>
+                    android:layout_marginBottom="6dp"/>
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal">
 
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginEnd="6dp" android:orientation="vertical" android:background="@drawable/bg_card" android:padding="10dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Templates" android:textColor="@color/text_primary" android:textSize="12sp" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="200+" android:textColor="@color/text_secondary" android:textSize="10sp"/>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginEnd="4dp" android:orientation="vertical" android:background="@drawable/bg_card" android:padding="8dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Templates" android:textColor="@color/text_primary" android:textSize="10sp" android:textStyle="bold"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="200+" android:textColor="@color/text_secondary" android:textSize="9sp"/>
                     </LinearLayout>
 
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginEnd="6dp" android:orientation="vertical" android:background="@drawable/bg_card" android:padding="10dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Assets" android:textColor="@color/text_primary" android:textSize="12sp" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="5000+" android:textColor="@color/text_secondary" android:textSize="10sp"/>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginEnd="4dp" android:orientation="vertical" android:background="@drawable/bg_card" android:padding="8dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Assets" android:textColor="@color/text_primary" android:textSize="10sp" android:textStyle="bold"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="5000+" android:textColor="@color/text_secondary" android:textSize="9sp"/>
                     </LinearLayout>
 
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginEnd="6dp" android:orientation="vertical" android:background="@drawable/bg_card" android:padding="10dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Tutorials" android:textColor="@color/text_primary" android:textSize="12sp" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Learn" android:textColor="@color/text_secondary" android:textSize="10sp"/>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginEnd="4dp" android:orientation="vertical" android:background="@drawable/bg_card" android:padding="8dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Tutorials" android:textColor="@color/text_primary" android:textSize="10sp" android:textStyle="bold"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Learn" android:textColor="@color/text_secondary" android:textSize="9sp"/>
                     </LinearLayout>
 
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:background="@drawable/bg_card" android:padding="10dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Community" android:textColor="@color/text_primary" android:textSize="12sp" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Connect" android:textColor="@color/text_secondary" android:textSize="10sp"/>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:background="@drawable/bg_card" android:padding="8dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Community" android:textColor="@color/text_primary" android:textSize="10sp" android:textStyle="bold"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Connect" android:textColor="@color/text_secondary" android:textSize="9sp"/>
                     </LinearLayout>
 
                 </LinearLayout>
