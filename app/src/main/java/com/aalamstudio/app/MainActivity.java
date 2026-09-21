@@ -7,6 +7,7 @@ import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -15,7 +16,7 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    private ScrollView panelHome;
+    private FrameLayout panelHome;
     private LinearLayout panelPlaceholder;
     private TextView placeholderTitle;
     private LinearLayout[] navItems;
@@ -23,10 +24,15 @@ public class MainActivity extends AppCompatActivity {
     private ScrollView sidebarScroll;
     private LinearLayout navListContainer;
     private TextView toggleSidebar;
+    private TextView sidebarTitle;
     private boolean sidebarExpanded = true;
 
     private LinearLayout homeContent;
-    private float currentScale = 1.0f;
+
+    private float scaleFactor = 1.0f;
+    private float translateX = 0f, translateY = 0f;
+    private float lastTouchX, lastTouchY;
+    private ScaleGestureDetector scaleDetector;
 
     private TextView statTotalProjects, statGames, statApps, statAssets;
     private LinearLayout recentProjectsContainer;
@@ -66,14 +72,16 @@ public class MainActivity extends AppCompatActivity {
         sidebarScroll = findViewById(R.id.sidebarScroll);
         navListContainer = findViewById(R.id.navListContainer);
         toggleSidebar = findViewById(R.id.toggleSidebar);
+        sidebarTitle = findViewById(R.id.sidebarTitle);
 
         toggleSidebar.setOnClickListener(v -> {
             sidebarExpanded = !sidebarExpanded;
             navListContainer.setVisibility(sidebarExpanded ? View.VISIBLE : View.GONE);
+            sidebarTitle.setVisibility(sidebarExpanded ? View.VISIBLE : View.GONE);
             toggleSidebar.setText(sidebarExpanded ? "▾" : "▸");
 
             ViewGroup.LayoutParams params = sidebarScroll.getLayoutParams();
-            params.width = dp(sidebarExpanded ? 180 : 60);
+            params.width = dp(sidebarExpanded ? 180 : 50);
             sidebarScroll.setLayoutParams(params);
         });
 
@@ -103,26 +111,65 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        ScaleGestureDetector scaleDetector = new ScaleGestureDetector(this,
+        setupPinchAndPan();
+    }
+
+    private void setupPinchAndPan() {
+        scaleDetector = new ScaleGestureDetector(this,
                 new ScaleGestureDetector.SimpleOnScaleGestureListener() {
                     @Override
                     public boolean onScale(ScaleGestureDetector detector) {
-                        currentScale *= detector.getScaleFactor();
-                        currentScale = Math.max(0.6f, Math.min(currentScale, 2.5f));
-                        applyZoom();
+                        float prevScale = scaleFactor;
+                        scaleFactor *= detector.getScaleFactor();
+                        scaleFactor = Math.max(0.6f, Math.min(scaleFactor, 3.0f));
+
+                        float focusX = detector.getFocusX();
+                        float focusY = detector.getFocusY();
+                        float ratio = scaleFactor / prevScale;
+
+                        translateX = focusX - (focusX - translateX) * ratio;
+                        translateY = focusY - (focusY - translateY) * ratio;
+
+                        applyTransform();
                         return true;
                     }
                 });
 
         panelHome.setOnTouchListener((v, event) -> {
             scaleDetector.onTouchEvent(event);
-            return false;
+
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    lastTouchX = event.getX();
+                    lastTouchY = event.getY();
+                    break;
+
+                case MotionEvent.ACTION_MOVE:
+                    if (!scaleDetector.isInProgress()) {
+                        float x = event.getX();
+                        float y = event.getY();
+                        translateX += (x - lastTouchX);
+                        translateY += (y - lastTouchY);
+                        applyTransform();
+                        lastTouchX = x;
+                        lastTouchY = y;
+                    }
+                    break;
+
+                case MotionEvent.ACTION_POINTER_DOWN:
+                    lastTouchX = event.getX();
+                    lastTouchY = event.getY();
+                    break;
+            }
+            return true;
         });
     }
 
-    private void applyZoom() {
-        homeContent.setScaleX(currentScale);
-        homeContent.setScaleY(currentScale);
+    private void applyTransform() {
+        homeContent.setScaleX(scaleFactor);
+        homeContent.setScaleY(scaleFactor);
+        homeContent.setTranslationX(translateX);
+        homeContent.setTranslationY(translateY);
         homeContent.setPivotX(0);
         homeContent.setPivotY(0);
     }
