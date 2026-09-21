@@ -2,6 +2,8 @@ package com.aalamstudio.app;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -18,9 +20,13 @@ public class MainActivity extends AppCompatActivity {
     private TextView placeholderTitle;
     private LinearLayout[] navItems;
 
+    private ScrollView sidebarScroll;
     private LinearLayout navListContainer;
     private TextView toggleSidebar;
     private boolean sidebarExpanded = true;
+
+    private LinearLayout homeContent;
+    private float currentScale = 1.0f;
 
     private TextView statTotalProjects, statGames, statApps, statAssets;
     private LinearLayout recentProjectsContainer;
@@ -34,6 +40,7 @@ public class MainActivity extends AppCompatActivity {
         panelHome = findViewById(R.id.panelHome);
         panelPlaceholder = findViewById(R.id.panelPlaceholder);
         placeholderTitle = findViewById(R.id.placeholderTitle);
+        homeContent = findViewById(R.id.homeContent);
 
         statTotalProjects = findViewById(R.id.statTotalProjects);
         statGames = findViewById(R.id.statGames);
@@ -56,6 +63,7 @@ public class MainActivity extends AppCompatActivity {
                 navTutorials, navCommunity, navTools, navSettings
         };
 
+        sidebarScroll = findViewById(R.id.sidebarScroll);
         navListContainer = findViewById(R.id.navListContainer);
         toggleSidebar = findViewById(R.id.toggleSidebar);
 
@@ -63,6 +71,10 @@ public class MainActivity extends AppCompatActivity {
             sidebarExpanded = !sidebarExpanded;
             navListContainer.setVisibility(sidebarExpanded ? View.VISIBLE : View.GONE);
             toggleSidebar.setText(sidebarExpanded ? "▾" : "▸");
+
+            ViewGroup.LayoutParams params = sidebarScroll.getLayoutParams();
+            params.width = dp(sidebarExpanded ? 180 : 60);
+            sidebarScroll.setLayoutParams(params);
         });
 
         navHome.setOnClickListener(v -> selectNav(navHome, () -> showPanel(panelHome, null)));
@@ -90,6 +102,29 @@ public class MainActivity extends AppCompatActivity {
             intent.putExtra(NewProjectActivity.EXTRA_PROJECT_TYPE, "Game");
             startActivity(intent);
         });
+
+        ScaleGestureDetector scaleDetector = new ScaleGestureDetector(this,
+                new ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                    @Override
+                    public boolean onScale(ScaleGestureDetector detector) {
+                        currentScale *= detector.getScaleFactor();
+                        currentScale = Math.max(0.6f, Math.min(currentScale, 2.5f));
+                        applyZoom();
+                        return true;
+                    }
+                });
+
+        panelHome.setOnTouchListener((v, event) -> {
+            scaleDetector.onTouchEvent(event);
+            return false;
+        });
+    }
+
+    private void applyZoom() {
+        homeContent.setScaleX(currentScale);
+        homeContent.setScaleY(currentScale);
+        homeContent.setPivotX(0);
+        homeContent.setPivotY(0);
     }
 
     @Override
