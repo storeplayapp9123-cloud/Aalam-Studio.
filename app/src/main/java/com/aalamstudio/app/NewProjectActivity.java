@@ -20,6 +20,9 @@ public class NewProjectActivity extends AppCompatActivity {
     private String selectedGameType = "2D";
     private String selectedGameOrientation = "Portrait";
 
+    private LinearLayout typeGame, typeApp, type3D, typeTemplate;
+    private LinearLayout[] typeCards;
+
     private LinearLayout orientPortrait, orientLandscape;
     private LinearLayout game2D, game3D;
     private LinearLayout gameOrientPortrait, gameOrientLandscape;
@@ -29,46 +32,40 @@ public class NewProjectActivity extends AppCompatActivity {
     private LinearLayout[] gameTypeCards;
     private LinearLayout[] gameOrientCards;
 
-    private TextView locationPath;
+    private LinearLayout panelAppOptions, panelGameOptions;
+    private TextView locationPath, previewName, previewDetail;
+    private EditText inputProjectName, inputPackageName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_new_project);
 
-        projectType = getIntent().getStringExtra(EXTRA_PROJECT_TYPE);
-        if (projectType == null) projectType = "App";
+        String initialType = getIntent().getStringExtra(EXTRA_PROJECT_TYPE);
+        if (initialType == null) initialType = "App";
+        projectType = initialType;
 
-        TextView screenTitle = findViewById(R.id.screenTitle);
-        LinearLayout panelAppOptions = findViewById(R.id.panelAppOptions);
-        LinearLayout panelGameOptions = findViewById(R.id.panelGameOptions);
+        panelAppOptions = findViewById(R.id.panelAppOptions);
+        panelGameOptions = findViewById(R.id.panelGameOptions);
+        inputProjectName = findViewById(R.id.inputProjectName);
+        inputPackageName = findViewById(R.id.inputPackageName);
+        locationPath = findViewById(R.id.locationPath);
+        previewName = findViewById(R.id.previewName);
+        previewDetail = findViewById(R.id.previewDetail);
 
-        EditText inputProjectName = findViewById(R.id.inputProjectName);
-        EditText inputPackageName = findViewById(R.id.inputPackageName);
         Button btnCancel = findViewById(R.id.btnCancel);
         Button btnCreateProject = findViewById(R.id.btnCreateProject);
-        locationPath = findViewById(R.id.locationPath);
 
-        if (projectType.equals("Game")) {
-            screenTitle.setText("New Game Project");
-            panelAppOptions.setVisibility(View.GONE);
-            panelGameOptions.setVisibility(View.VISIBLE);
-            updateLocationPath("Games", "");
-        } else {
-            screenTitle.setText("New App Project");
-            panelAppOptions.setVisibility(View.VISIBLE);
-            panelGameOptions.setVisibility(View.GONE);
-            updateLocationPath("Apps", "");
-        }
+        typeGame = findViewById(R.id.typeGame);
+        typeApp = findViewById(R.id.typeApp);
+        type3D = findViewById(R.id.type3D);
+        typeTemplate = findViewById(R.id.typeTemplate);
+        typeCards = new LinearLayout[]{typeGame, typeApp, type3D, typeTemplate};
 
-        inputProjectName.addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-                String folder = projectType.equals("Game") ? "Games" : "Apps";
-                updateLocationPath(folder, s.toString());
-            }
-            @Override public void afterTextChanged(Editable s) {}
-        });
+        typeGame.setOnClickListener(v -> selectProjectType(typeGame, "Game"));
+        typeApp.setOnClickListener(v -> selectProjectType(typeApp, "App"));
+        type3D.setOnClickListener(v -> selectProjectType(type3D, "3D Experience"));
+        typeTemplate.setOnClickListener(v -> selectProjectType(typeTemplate, "Template"));
 
         orientPortrait = findViewById(R.id.orientPortrait);
         orientLandscape = findViewById(R.id.orientLandscape);
@@ -84,17 +81,44 @@ public class NewProjectActivity extends AppCompatActivity {
         gameOrientationContainer = findViewById(R.id.gameOrientationContainer);
         gameOrientationLockedText = findViewById(R.id.gameOrientationLockedText);
 
-        orientPortrait.setOnClickListener(v -> selectOrientation(orientPortrait, "Portrait"));
-        orientLandscape.setOnClickListener(v -> selectOrientation(orientLandscape, "Landscape"));
+        orientPortrait.setOnClickListener(v -> {
+            selectOrientation(orientPortrait, "Portrait");
+            updatePreview();
+        });
+        orientLandscape.setOnClickListener(v -> {
+            selectOrientation(orientLandscape, "Landscape");
+            updatePreview();
+        });
         selectOrientation(orientPortrait, "Portrait");
 
-        game2D.setOnClickListener(v -> selectGameType(game2D, "2D"));
-        game3D.setOnClickListener(v -> selectGameType(game3D, "3D"));
+        game2D.setOnClickListener(v -> {
+            selectGameType(game2D, "2D");
+            updatePreview();
+        });
+        game3D.setOnClickListener(v -> {
+            selectGameType(game3D, "3D");
+            updatePreview();
+        });
         selectGameType(game2D, "2D");
 
-        gameOrientPortrait.setOnClickListener(v -> selectGameOrientation(gameOrientPortrait, "Portrait"));
-        gameOrientLandscape.setOnClickListener(v -> selectGameOrientation(gameOrientLandscape, "Landscape"));
+        gameOrientPortrait.setOnClickListener(v -> {
+            selectGameOrientation(gameOrientPortrait, "Portrait");
+            updatePreview();
+        });
+        gameOrientLandscape.setOnClickListener(v -> {
+            selectGameOrientation(gameOrientLandscape, "Landscape");
+            updatePreview();
+        });
         selectGameOrientation(gameOrientPortrait, "Portrait");
+
+        inputProjectName.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                updateLocationPath();
+                updatePreview();
+            }
+            @Override public void afterTextChanged(Editable s) {}
+        });
 
         btnCancel.setOnClickListener(v -> finish());
 
@@ -127,13 +151,45 @@ public class NewProjectActivity extends AppCompatActivity {
             setResult(RESULT_OK);
             finish();
         });
+
+        selectProjectType(initialType.equals("Game") ? typeGame : typeApp, initialType);
     }
 
-    private void updateLocationPath(String folder, String projectName) {
-        String safeName = projectName.trim().isEmpty()
-                ? "your-project-name"
-                : projectName.trim().replace(" ", "_");
+    private void selectProjectType(LinearLayout selected, String type) {
+        for (LinearLayout card : typeCards) card.setSelected(card == selected);
+        projectType = type;
+
+        if (type.equals("Game")) {
+            panelAppOptions.setVisibility(View.GONE);
+            panelGameOptions.setVisibility(View.VISIBLE);
+        } else {
+            panelAppOptions.setVisibility(View.VISIBLE);
+            panelGameOptions.setVisibility(View.GONE);
+        }
+
+        updateLocationPath();
+        updatePreview();
+    }
+
+    private void updateLocationPath() {
+        String name = inputProjectName.getText().toString().trim();
+        String safeName = name.isEmpty() ? "your-project-name" : name.replace(" ", "_");
+        String folder = projectType.equals("Game") ? "Games" : "Apps";
         locationPath.setText("/AalamStudio/Projects/" + folder + "/" + safeName);
+    }
+
+    private void updatePreview() {
+        String name = inputProjectName.getText().toString().trim();
+        previewName.setText(name.isEmpty() ? "My Project" : name);
+
+        String detail;
+        if (projectType.equals("Game")) {
+            String orientation = selectedGameType.equals("3D") ? "Landscape" : selectedGameOrientation;
+            detail = projectType + " • " + selectedGameType + " • " + orientation;
+        } else {
+            detail = projectType + " • " + selectedOrientation;
+        }
+        previewDetail.setText(detail);
     }
 
     private void selectOrientation(LinearLayout selected, String orientation) {
