@@ -17,6 +17,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     private FrameLayout panelHome;
+    private FrameLayout panelProjects;
     private LinearLayout panelPlaceholder;
     private TextView placeholderTitle;
     private LinearLayout[] navItems;
@@ -38,12 +39,16 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout recentProjectsContainer;
     private TextView emptyProjectsText;
 
+    private LinearLayout projectsListContainer;
+    private TextView emptyProjectsListText;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         panelHome = findViewById(R.id.panelHome);
+        panelProjects = findViewById(R.id.panelProjects);
         panelPlaceholder = findViewById(R.id.panelPlaceholder);
         placeholderTitle = findViewById(R.id.placeholderTitle);
         homeContent = findViewById(R.id.homeContent);
@@ -54,6 +59,9 @@ public class MainActivity extends AppCompatActivity {
         statAssets = findViewById(R.id.statAssets);
         recentProjectsContainer = findViewById(R.id.recentProjectsContainer);
         emptyProjectsText = findViewById(R.id.emptyProjectsText);
+
+        projectsListContainer = findViewById(R.id.projectsListContainer);
+        emptyProjectsListText = findViewById(R.id.emptyProjectsListText);
 
         LinearLayout navHome = findViewById(R.id.navHome);
         LinearLayout navProjects = findViewById(R.id.navProjects);
@@ -86,7 +94,10 @@ public class MainActivity extends AppCompatActivity {
         });
 
         navHome.setOnClickListener(v -> selectNav(navHome, () -> showPanel(panelHome, null)));
-        navProjects.setOnClickListener(v -> selectNav(navProjects, () -> showPanel(panelPlaceholder, "Projects")));
+        navProjects.setOnClickListener(v -> selectNav(navProjects, () -> {
+            showPanel(panelProjects, null);
+            refreshProjectsList();
+        }));
         navTemplates.setOnClickListener(v -> selectNav(navTemplates, () -> showPanel(panelPlaceholder, "Templates")));
         navAssets.setOnClickListener(v -> selectNav(navAssets, () -> showPanel(panelPlaceholder, "Assets")));
         navTutorials.setOnClickListener(v -> selectNav(navTutorials, () -> showPanel(panelPlaceholder, "Tutorials")));
@@ -185,6 +196,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         refreshDashboard();
+        if (panelProjects.getVisibility() == View.VISIBLE) {
+            refreshProjectsList();
+        }
     }
 
     private void refreshDashboard() {
@@ -208,6 +222,88 @@ public class MainActivity extends AppCompatActivity {
                 recentProjectsContainer.addView(buildProjectCard(p));
             }
         }
+    }
+
+    private void refreshProjectsList() {
+        List<Project> all = ProjectStore.getRecentProjects(this, 1000);
+
+        projectsListContainer.removeAllViews();
+
+        if (all.isEmpty()) {
+            projectsListContainer.addView(emptyProjectsListText);
+        } else {
+            for (Project p : all) {
+                projectsListContainer.addView(buildFullProjectRow(p));
+            }
+        }
+    }
+
+    private View buildFullProjectRow(Project p) {
+        LinearLayout row = new LinearLayout(this);
+        LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        rowParams.bottomMargin = dp(10);
+        row.setLayoutParams(rowParams);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        row.setBackgroundResource(R.drawable.bg_card);
+        row.setPadding(dp(12), dp(12), dp(12), dp(12));
+
+        row.setOnClickListener(v -> {
+            Intent intent = new Intent(this, ProjectEditorActivity.class);
+            intent.putExtra(ProjectEditorActivity.EXTRA_PROJECT_NAME, p.name);
+            startActivity(intent);
+        });
+
+        LinearLayout info = new LinearLayout(this);
+        LinearLayout.LayoutParams infoParams = new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        info.setLayoutParams(infoParams);
+        info.setOrientation(LinearLayout.VERTICAL);
+
+        TextView name = new TextView(this);
+        name.setText(p.name);
+        name.setTextColor(0xFFFFFFFF);
+        name.setTextSize(14);
+        name.setTypeface(null, android.graphics.Typeface.BOLD);
+
+        TextView meta = new TextView(this);
+        meta.setText(p.type + " • " + p.detail + " • " + timeAgo(p.timestamp));
+        meta.setTextColor(0xFF999999);
+        meta.setTextSize(11);
+        LinearLayout.LayoutParams metaParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        metaParams.topMargin = dp(2);
+        meta.setLayoutParams(metaParams);
+
+        TextView pkg = new TextView(this);
+        pkg.setText(p.packageName);
+        pkg.setTextColor(0xFF666666);
+        pkg.setTextSize(10);
+        LinearLayout.LayoutParams pkgParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        pkgParams.topMargin = dp(2);
+        pkg.setLayoutParams(pkgParams);
+
+        info.addView(name);
+        info.addView(meta);
+        info.addView(pkg);
+
+        TextView deleteBtn = new TextView(this);
+        deleteBtn.setText("Delete");
+        deleteBtn.setTextColor(0xFFFF6B6B);
+        deleteBtn.setTextSize(12);
+        deleteBtn.setPadding(dp(10), dp(6), dp(10), dp(6));
+        deleteBtn.setOnClickListener(v -> {
+            ProjectStore.deleteProject(this, p.timestamp);
+            refreshProjectsList();
+            refreshDashboard();
+        });
+
+        row.addView(info);
+        row.addView(deleteBtn);
+
+        return row;
     }
 
     private View buildProjectCard(Project p) {
@@ -276,10 +372,13 @@ public class MainActivity extends AppCompatActivity {
 
     private void showPanel(View panelToShow, String placeholderText) {
         panelHome.setVisibility(View.GONE);
+        panelProjects.setVisibility(View.GONE);
         panelPlaceholder.setVisibility(View.GONE);
 
         if (panelToShow == panelHome) {
             panelHome.setVisibility(View.VISIBLE);
+        } else if (panelToShow == panelProjects) {
+            panelProjects.setVisibility(View.VISIBLE);
         } else {
             placeholderTitle.setText(placeholderText);
             panelPlaceholder.setVisibility(View.VISIBLE);
