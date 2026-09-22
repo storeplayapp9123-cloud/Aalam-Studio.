@@ -98,6 +98,7 @@ public class MainActivity extends AppCompatActivity {
 
         Button btnCreateApp = findViewById(R.id.btnCreateApp);
         Button btnCreateGame = findViewById(R.id.btnCreateGame);
+        Button btnNewProject = findViewById(R.id.btnNewProject);
 
         btnCreateApp.setOnClickListener(v -> {
             Intent intent = new Intent(this, NewProjectActivity.class);
@@ -108,6 +109,12 @@ public class MainActivity extends AppCompatActivity {
         btnCreateGame.setOnClickListener(v -> {
             Intent intent = new Intent(this, NewProjectActivity.class);
             intent.putExtra(NewProjectActivity.EXTRA_PROJECT_TYPE, "Game");
+            startActivity(intent);
+        });
+
+        btnNewProject.setOnClickListener(v -> {
+            Intent intent = new Intent(this, NewProjectActivity.class);
+            intent.putExtra(NewProjectActivity.EXTRA_PROJECT_TYPE, "App");
             startActivity(intent);
         });
 
