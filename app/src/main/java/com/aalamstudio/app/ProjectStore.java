@@ -20,6 +20,17 @@ public class ProjectStore {
         saveAll(context, projects);
     }
 
+    public static void deleteProject(Context context, long timestamp) {
+        List<Project> projects = getAllProjects(context);
+        List<Project> updated = new ArrayList<>();
+        for (Project p : projects) {
+            if (p.timestamp != timestamp) {
+                updated.add(p);
+            }
+        }
+        saveAll(context, updated);
+    }
+
     public static List<Project> getAllProjects(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         String json = prefs.getString(KEY_PROJECTS, "[]");
