@@ -17,6 +17,7 @@ public class ProjectEditorActivity extends AppCompatActivity {
 
     public static final String EXTRA_PROJECT_NAME = "project_name";
     public static final String EXTRA_PROJECT_TYPE = "project_type";
+    public static final String EXTRA_PROJECT_LANGUAGE = "project_language";
 
     private EditText codeEditorText;
     private TextView openFileTabLabel;
@@ -24,6 +25,7 @@ public class ProjectEditorActivity extends AppCompatActivity {
     private Map<String, String> fileContents = new LinkedHashMap<>();
     private TextView selectedFileItem;
     private String projectType = "App";
+    private String projectLanguage = "Java";
     private String defaultOpenFile = "MainActivity.java";
 
     private LinearLayout fileTreePanel;
@@ -41,6 +43,9 @@ public class ProjectEditorActivity extends AppCompatActivity {
 
         String type = getIntent().getStringExtra(EXTRA_PROJECT_TYPE);
         if (type != null) projectType = type;
+
+        String lang = getIntent().getStringExtra(EXTRA_PROJECT_LANGUAGE);
+        if (lang != null) projectLanguage = lang;
 
         TextView editorProjectName = findViewById(R.id.editorProjectName);
         editorProjectName.setText(projectName);
@@ -89,20 +94,45 @@ public class ProjectEditorActivity extends AppCompatActivity {
         if (projectType.equals("Game")) {
             setupGameFileContents();
             setupGameFileTree();
-            defaultOpenFile = "GameMain.java";
+            defaultOpenFile = getGameMainFileName();
         } else {
             setupAppFileContents();
             setupAppFileTree();
-            defaultOpenFile = "MainActivity.java";
+            defaultOpenFile = getAppMainFileName();
         }
 
         setupTabs();
         openFile(defaultOpenFile);
     }
 
+    // ===== Language-aware helpers =====
+
+    private boolean isKotlin() {
+        return projectLanguage.equals("Kotlin");
+    }
+
+    private String getAppMainFileName() {
+        return isKotlin() ? "MainActivity.kt" : "MainActivity.java";
+    }
+
+    private String getGameMainFileName() {
+        if (projectLanguage.equals("Kotlin")) return "GameMain.kt";
+        if (projectLanguage.equals("C++")) return "GameMain.cpp";
+        if (projectLanguage.equals("C")) return "GameMain.c";
+        if (projectLanguage.equals("C#")) return "GameMain.cs";
+        if (projectLanguage.equals("Swift")) return "GameMain.swift";
+        if (projectLanguage.equals("Lua")) return "GameMain.lua";
+        if (projectLanguage.equals("JavaScript")) return "GameMain.js";
+        if (projectLanguage.equals("Python")) return "GameMain.py";
+        if (projectLanguage.equals("Go")) return "GameMain.go";
+        return "GameMain.java";
+    }
+
     // ===== APP PROJECT FILES =====
 
     private void setupAppFileContents() {
+        String mainFile = getAppMainFileName();
+
         fileContents.put("AndroidManifest.xml",
                 "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
                 "<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\">\n\n" +
@@ -121,17 +151,30 @@ public class ProjectEditorActivity extends AppCompatActivity {
                 "    </application>\n" +
                 "</manifest>");
 
-        fileContents.put("MainActivity.java",
-                "package com.example.app;\n\n" +
-                "import android.os.Bundle;\n" +
-                "import androidx.appcompat.app.AppCompatActivity;\n\n" +
-                "public class MainActivity extends AppCompatActivity {\n" +
-                "    @Override\n" +
-                "    protected void onCreate(Bundle savedInstanceState) {\n" +
-                "        super.onCreate(savedInstanceState);\n" +
-                "        setContentView(R.layout.activity_main);\n" +
-                "    }\n" +
-                "}");
+        if (isKotlin()) {
+            fileContents.put(mainFile,
+                    "package com.example.app\n\n" +
+                    "import android.os.Bundle\n" +
+                    "import androidx.appcompat.app.AppCompatActivity\n\n" +
+                    "class MainActivity : AppCompatActivity() {\n" +
+                    "    override fun onCreate(savedInstanceState: Bundle?) {\n" +
+                    "        super.onCreate(savedInstanceState)\n" +
+                    "        setContentView(R.layout.activity_main)\n" +
+                    "    }\n" +
+                    "}");
+        } else {
+            fileContents.put(mainFile,
+                    "package com.example.app;\n\n" +
+                    "import android.os.Bundle;\n" +
+                    "import androidx.appcompat.app.AppCompatActivity;\n\n" +
+                    "public class MainActivity extends AppCompatActivity {\n" +
+                    "    @Override\n" +
+                    "    protected void onCreate(Bundle savedInstanceState) {\n" +
+                    "        super.onCreate(savedInstanceState);\n" +
+                    "        setContentView(R.layout.activity_main);\n" +
+                    "    }\n" +
+                    "}");
+        }
 
         fileContents.put("activity_main.xml",
                 "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
@@ -164,12 +207,13 @@ public class ProjectEditorActivity extends AppCompatActivity {
 
     private void setupAppFileTree() {
         LinearLayout fileTreeContainer = findViewById(R.id.fileTreeContainer);
+        String mainFile = getAppMainFileName();
 
         addFolderLabel(fileTreeContainer, "📁 app");
         addFolderLabel(fileTreeContainer, "  📁 manifests");
         addFileItem(fileTreeContainer, "AndroidManifest.xml", "    📄 ");
         addFolderLabel(fileTreeContainer, "  📁 java");
-        addFileItem(fileTreeContainer, "MainActivity.java", "    📄 ");
+        addFileItem(fileTreeContainer, mainFile, "    📄 ");
         addFolderLabel(fileTreeContainer, "  📁 res");
         addFolderLabel(fileTreeContainer, "    📁 layout");
         addFileItem(fileTreeContainer, "activity_main.xml", "      📄 ");
@@ -181,6 +225,8 @@ public class ProjectEditorActivity extends AppCompatActivity {
     // ===== GAME PROJECT FILES =====
 
     private void setupGameFileContents() {
+        String mainFile = getGameMainFileName();
+
         fileContents.put("GameManifest.xml",
                 "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
                 "<game-manifest>\n" +
@@ -188,68 +234,130 @@ public class ProjectEditorActivity extends AppCompatActivity {
                 "    <version>1.0</version>\n" +
                 "    <orientation>landscape</orientation>\n" +
                 "    <engine>Aalam Game Engine</engine>\n" +
+                "    <language>" + projectLanguage + "</language>\n" +
                 "</game-manifest>");
 
-        fileContents.put("GameMain.java",
-                "package com.example.game;\n\n" +
-                "import com.aalam.engine.GameEngine;\n" +
-                "import com.aalam.engine.Scene;\n\n" +
-                "public class GameMain extends GameEngine {\n\n" +
-                "    @Override\n" +
-                "    public void onGameStart() {\n" +
-                "        loadScene(\"MainScene\");\n" +
-                "    }\n\n" +
-                "    @Override\n" +
-                "    public void onUpdate(float deltaTime) {\n" +
-                "        // game loop logic\n" +
-                "    }\n" +
-                "}");
-
-        fileContents.put("Player.java",
-                "package com.example.game.entities;\n\n" +
-                "import com.aalam.engine.Entity;\n\n" +
-                "public class Player extends Entity {\n\n" +
-                "    private int health = 100;\n" +
-                "    private float speed = 5.0f;\n\n" +
-                "    public void move(float x, float y) {\n" +
-                "        // movement logic\n" +
-                "    }\n\n" +
-                "    public void takeDamage(int amount) {\n" +
-                "        health -= amount;\n" +
-                "    }\n" +
-                "}");
-
-        fileContents.put("MainScene.scene",
-                "// Aalam Game Engine - Scene File\n" +
-                "scene \"MainScene\" {\n" +
-                "    background: \"sky_bg.png\"\n" +
-                "    gravity: 9.8\n\n" +
-                "    spawn Player at (0, 0)\n" +
-                "    spawn Enemy at (100, 0)\n" +
-                "    spawn Platform at (0, -50)\n" +
-                "}");
+        fileContents.put(mainFile, buildGameMainContent());
 
         fileContents.put("game_config.json",
                 "{\n" +
                 "  \"gameName\": \"My Game\",\n" +
                 "  \"engine\": \"Aalam Game Engine\",\n" +
+                "  \"language\": \"" + projectLanguage + "\",\n" +
                 "  \"renderPipeline\": \"2D\",\n" +
                 "  \"targetFps\": 60,\n" +
                 "  \"orientation\": \"landscape\"\n" +
                 "}");
     }
 
+    private String buildGameMainContent() {
+        switch (projectLanguage) {
+            case "Kotlin":
+                return "package com.example.game\n\n" +
+                        "import com.aalam.engine.GameEngine\n\n" +
+                        "class GameMain : GameEngine() {\n" +
+                        "    override fun onGameStart() {\n" +
+                        "        loadScene(\"MainScene\")\n" +
+                        "    }\n\n" +
+                        "    override fun onUpdate(deltaTime: Float) {\n" +
+                        "        // game loop logic\n" +
+                        "    }\n" +
+                        "}";
+            case "C++":
+                return "#include \"AalamEngine.h\"\n\n" +
+                        "class GameMain : public GameEngine {\n" +
+                        "public:\n" +
+                        "    void onGameStart() override {\n" +
+                        "        loadScene(\"MainScene\");\n" +
+                        "    }\n\n" +
+                        "    void onUpdate(float deltaTime) override {\n" +
+                        "        // game loop logic\n" +
+                        "    }\n" +
+                        "};";
+            case "C":
+                return "#include \"aalam_engine.h\"\n\n" +
+                        "void on_game_start() {\n" +
+                        "    load_scene(\"MainScene\");\n" +
+                        "}\n\n" +
+                        "void on_update(float delta_time) {\n" +
+                        "    // game loop logic\n" +
+                        "}";
+            case "C#":
+                return "using Aalam.Engine;\n\n" +
+                        "public class GameMain : GameEngine {\n" +
+                        "    public override void OnGameStart() {\n" +
+                        "        LoadScene(\"MainScene\");\n" +
+                        "    }\n\n" +
+                        "    public override void OnUpdate(float deltaTime) {\n" +
+                        "        // game loop logic\n" +
+                        "    }\n" +
+                        "}";
+            case "Swift":
+                return "import AalamEngine\n\n" +
+                        "class GameMain: GameEngine {\n" +
+                        "    override func onGameStart() {\n" +
+                        "        loadScene(\"MainScene\")\n" +
+                        "    }\n\n" +
+                        "    override func onUpdate(deltaTime: Float) {\n" +
+                        "        // game loop logic\n" +
+                        "    }\n" +
+                        "}";
+            case "Lua":
+                return "-- Aalam Game Engine (Lua)\n\n" +
+                        "function onGameStart()\n" +
+                        "    loadScene(\"MainScene\")\n" +
+                        "end\n\n" +
+                        "function onUpdate(deltaTime)\n" +
+                        "    -- game loop logic\n" +
+                        "end";
+            case "JavaScript":
+                return "// Aalam Game Engine (JavaScript)\n\n" +
+                        "function onGameStart() {\n" +
+                        "    loadScene(\"MainScene\");\n" +
+                        "}\n\n" +
+                        "function onUpdate(deltaTime) {\n" +
+                        "    // game loop logic\n" +
+                        "}";
+            case "Python":
+                return "# Aalam Game Engine (Python)\n\n" +
+                        "def on_game_start():\n" +
+                        "    load_scene(\"MainScene\")\n\n" +
+                        "def on_update(delta_time):\n" +
+                        "    # game loop logic\n" +
+                        "    pass";
+            case "Go":
+                return "package main\n\n" +
+                        "import \"aalam/engine\"\n\n" +
+                        "func OnGameStart() {\n" +
+                        "    engine.LoadScene(\"MainScene\")\n" +
+                        "}\n\n" +
+                        "func OnUpdate(deltaTime float32) {\n" +
+                        "    // game loop logic\n" +
+                        "}";
+            default:
+                return "package com.example.game;\n\n" +
+                        "import com.aalam.engine.GameEngine;\n\n" +
+                        "public class GameMain extends GameEngine {\n\n" +
+                        "    @Override\n" +
+                        "    public void onGameStart() {\n" +
+                        "        loadScene(\"MainScene\");\n" +
+                        "    }\n\n" +
+                        "    @Override\n" +
+                        "    public void onUpdate(float deltaTime) {\n" +
+                        "        // game loop logic\n" +
+                        "    }\n" +
+                        "}";
+        }
+    }
+
     private void setupGameFileTree() {
         LinearLayout fileTreeContainer = findViewById(R.id.fileTreeContainer);
+        String mainFile = getGameMainFileName();
 
         addFolderLabel(fileTreeContainer, "🎮 game");
         addFileItem(fileTreeContainer, "GameManifest.xml", "  📄 ");
         addFolderLabel(fileTreeContainer, "  📁 scripts");
-        addFileItem(fileTreeContainer, "GameMain.java", "    📄 ");
-        addFolderLabel(fileTreeContainer, "  📁 entities");
-        addFileItem(fileTreeContainer, "Player.java", "    📄 ");
-        addFolderLabel(fileTreeContainer, "  📁 scenes");
-        addFileItem(fileTreeContainer, "MainScene.scene", "    📄 ");
+        addFileItem(fileTreeContainer, mainFile, "    📄 ");
         addFolderLabel(fileTreeContainer, "  📁 config");
         addFileItem(fileTreeContainer, "game_config.json", "    📄 ");
     }
