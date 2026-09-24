@@ -197,19 +197,21 @@
                 android:layout_height="0dp"
                 android:layout_weight="1">
 
-                <EditText
-                    android:id="@+id/codeEditorText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="@android:color/transparent"
-                    android:fontFamily="monospace"
-                    android:gravity="top|start"
-                    android:padding="10dp"
-                    android:textColor="#DDDDDD"
-                    android:textSize="11sp"
-                    android:inputType="textMultiLine"
-                    android:text="package com.example.app;\n\nimport android.os.Bundle;\nimport androidx.appcompat.app.AppCompatActivity;\n\npublic class MainActivity extends AppCompatActivity {\n    @Override\n    protected void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        setContentView(R.layout.activity_main);\n    }\n}"/>
-
+ <EditText
+                 android:id="@+id/codeEditorText"
+                 android:layout_width="match_parent"
+                 android:layout_height="wrap_content"
+                 android:background="#0D0D0D"
+                 android:fontFamily="monospace"
+                 android:gravity="top|start"
+                 android:padding="10dp"
+                 android:textColor="#DDDDDD"
+                 android:textCursorDrawable="@null"
+                 android:textSize="11sp"
+                 android:inputType="textMultiLine|textNoSuggestions"
+                 android:imeOptions="flagNoExtractUi"
+                 android:text="package com.example.app;\n\nimport android.os.Bundle;\nimport androidx.appcompat.app.AppCompatActivity;\n\npublic class MainActivity extends AppCompatActivity {\n    @Override\n    protected void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        setContentView(R.layout.activity_main);\n    }\n}"/>
+                 
             </ScrollView>
 
         </LinearLayout>
