@@ -1,9 +1,12 @@
 package com.aalamstudio.app;
 
 import android.os.Bundle;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
@@ -13,12 +16,20 @@ import java.util.Map;
 public class ProjectEditorActivity extends AppCompatActivity {
 
     public static final String EXTRA_PROJECT_NAME = "project_name";
+    public static final String EXTRA_PROJECT_TYPE = "project_type";
 
     private EditText codeEditorText;
     private TextView openFileTabLabel;
     private Map<String, TextView> fileItemViews = new LinkedHashMap<>();
     private Map<String, String> fileContents = new LinkedHashMap<>();
     private TextView selectedFileItem;
+    private String projectType = "App";
+    private String defaultOpenFile = "MainActivity.java";
+
+    private LinearLayout fileTreePanel;
+    private ScrollView fileTreeScroll;
+    private TextView toggleFileTree;
+    private boolean fileTreeExpanded = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,6 +38,9 @@ public class ProjectEditorActivity extends AppCompatActivity {
 
         String projectName = getIntent().getStringExtra(EXTRA_PROJECT_NAME);
         if (projectName == null) projectName = "My Project";
+
+        String type = getIntent().getStringExtra(EXTRA_PROJECT_TYPE);
+        if (type != null) projectType = type;
 
         TextView editorProjectName = findViewById(R.id.editorProjectName);
         editorProjectName.setText(projectName);
@@ -41,6 +55,15 @@ public class ProjectEditorActivity extends AppCompatActivity {
         Button btnBuildApk = findViewById(R.id.btnBuildApk);
         TextView buildLogText = findViewById(R.id.buildLogText);
 
+        LinearLayout buildLogPanel = findViewById(R.id.buildLogPanel);
+        TextView btnToggleBuildPanel = findViewById(R.id.btnToggleBuildPanel);
+
+        btnToggleBuildPanel.setOnClickListener(v -> {
+            boolean isVisible = buildLogPanel.getVisibility() == View.VISIBLE;
+            buildLogPanel.setVisibility(isVisible ? View.GONE : View.VISIBLE);
+            btnToggleBuildPanel.setText(isVisible ? "⌄" : "⌃");
+        });
+
         btnRun.setOnClickListener(v ->
                 Toast.makeText(this, "Run - coming soon", Toast.LENGTH_SHORT).show());
 
@@ -49,14 +72,37 @@ public class ProjectEditorActivity extends AppCompatActivity {
             Toast.makeText(this, "Build APK - coming soon", Toast.LENGTH_SHORT).show();
         });
 
-        setupFileContents();
-        setupFileTree();
-        setupTabs();
+        fileTreePanel = findViewById(R.id.fileTreePanel);
+        fileTreeScroll = findViewById(R.id.fileTreeScroll);
+        toggleFileTree = findViewById(R.id.toggleFileTree);
 
-        openFile("MainActivity.java");
+        toggleFileTree.setOnClickListener(v -> {
+            fileTreeExpanded = !fileTreeExpanded;
+            fileTreeScroll.setVisibility(fileTreeExpanded ? View.VISIBLE : View.GONE);
+            toggleFileTree.setText(fileTreeExpanded ? "▾" : "▸");
+
+            ViewGroup.LayoutParams params = fileTreePanel.getLayoutParams();
+            params.width = dp(fileTreeExpanded ? 140 : 40);
+            fileTreePanel.setLayoutParams(params);
+        });
+
+        if (projectType.equals("Game")) {
+            setupGameFileContents();
+            setupGameFileTree();
+            defaultOpenFile = "GameMain.java";
+        } else {
+            setupAppFileContents();
+            setupAppFileTree();
+            defaultOpenFile = "MainActivity.java";
+        }
+
+        setupTabs();
+        openFile(defaultOpenFile);
     }
 
-    private void setupFileContents() {
+    // ===== APP PROJECT FILES =====
+
+    private void setupAppFileContents() {
         fileContents.put("AndroidManifest.xml",
                 "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
                 "<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\">\n\n" +
@@ -116,7 +162,7 @@ public class ProjectEditorActivity extends AppCompatActivity {
                 "</resources>");
     }
 
-    private void setupFileTree() {
+    private void setupAppFileTree() {
         LinearLayout fileTreeContainer = findViewById(R.id.fileTreeContainer);
 
         addFolderLabel(fileTreeContainer, "📁 app");
@@ -131,6 +177,84 @@ public class ProjectEditorActivity extends AppCompatActivity {
         addFileItem(fileTreeContainer, "colors.xml", "      📄 ");
         addFileItem(fileTreeContainer, "strings.xml", "      📄 ");
     }
+
+    // ===== GAME PROJECT FILES =====
+
+    private void setupGameFileContents() {
+        fileContents.put("GameManifest.xml",
+                "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
+                "<game-manifest>\n" +
+                "    <name>My Game</name>\n" +
+                "    <version>1.0</version>\n" +
+                "    <orientation>landscape</orientation>\n" +
+                "    <engine>Aalam Game Engine</engine>\n" +
+                "</game-manifest>");
+
+        fileContents.put("GameMain.java",
+                "package com.example.game;\n\n" +
+                "import com.aalam.engine.GameEngine;\n" +
+                "import com.aalam.engine.Scene;\n\n" +
+                "public class GameMain extends GameEngine {\n\n" +
+                "    @Override\n" +
+                "    public void onGameStart() {\n" +
+                "        loadScene(\"MainScene\");\n" +
+                "    }\n\n" +
+                "    @Override\n" +
+                "    public void onUpdate(float deltaTime) {\n" +
+                "        // game loop logic\n" +
+                "    }\n" +
+                "}");
+
+        fileContents.put("Player.java",
+                "package com.example.game.entities;\n\n" +
+                "import com.aalam.engine.Entity;\n\n" +
+                "public class Player extends Entity {\n\n" +
+                "    private int health = 100;\n" +
+                "    private float speed = 5.0f;\n\n" +
+                "    public void move(float x, float y) {\n" +
+                "        // movement logic\n" +
+                "    }\n\n" +
+                "    public void takeDamage(int amount) {\n" +
+                "        health -= amount;\n" +
+                "    }\n" +
+                "}");
+
+        fileContents.put("MainScene.scene",
+                "// Aalam Game Engine - Scene File\n" +
+                "scene \"MainScene\" {\n" +
+                "    background: \"sky_bg.png\"\n" +
+                "    gravity: 9.8\n\n" +
+                "    spawn Player at (0, 0)\n" +
+                "    spawn Enemy at (100, 0)\n" +
+                "    spawn Platform at (0, -50)\n" +
+                "}");
+
+        fileContents.put("game_config.json",
+                "{\n" +
+                "  \"gameName\": \"My Game\",\n" +
+                "  \"engine\": \"Aalam Game Engine\",\n" +
+                "  \"renderPipeline\": \"2D\",\n" +
+                "  \"targetFps\": 60,\n" +
+                "  \"orientation\": \"landscape\"\n" +
+                "}");
+    }
+
+    private void setupGameFileTree() {
+        LinearLayout fileTreeContainer = findViewById(R.id.fileTreeContainer);
+
+        addFolderLabel(fileTreeContainer, "🎮 game");
+        addFileItem(fileTreeContainer, "GameManifest.xml", "  📄 ");
+        addFolderLabel(fileTreeContainer, "  📁 scripts");
+        addFileItem(fileTreeContainer, "GameMain.java", "    📄 ");
+        addFolderLabel(fileTreeContainer, "  📁 entities");
+        addFileItem(fileTreeContainer, "Player.java", "    📄 ");
+        addFolderLabel(fileTreeContainer, "  📁 scenes");
+        addFileItem(fileTreeContainer, "MainScene.scene", "    📄 ");
+        addFolderLabel(fileTreeContainer, "  📁 config");
+        addFileItem(fileTreeContainer, "game_config.json", "    📄 ");
+    }
+
+    // ===== SHARED HELPERS =====
 
     private void addFolderLabel(LinearLayout container, String text) {
         TextView item = new TextView(this);
