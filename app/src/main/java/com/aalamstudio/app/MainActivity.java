@@ -253,8 +253,9 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(this, ProjectEditorActivity.class);
             intent.putExtra(ProjectEditorActivity.EXTRA_PROJECT_NAME, p.name);
             intent.putExtra(ProjectEditorActivity.EXTRA_PROJECT_TYPE, p.type);
+            intent.putExtra(ProjectEditorActivity.EXTRA_PROJECT_LANGUAGE, p.language);
             startActivity(intent);
-       });
+         });
 
         LinearLayout info = new LinearLayout(this);
         LinearLayout.LayoutParams infoParams = new LinearLayout.LayoutParams(
