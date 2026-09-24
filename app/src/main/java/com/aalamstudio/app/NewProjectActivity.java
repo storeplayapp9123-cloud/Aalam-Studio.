@@ -181,9 +181,12 @@ public class NewProjectActivity extends AppCompatActivity {
                 detail = selectedOrientation + " - " + selectedLanguage;
             }
 
-            Project project = new Project(name, pkg, projectType, detail, System.currentTimeMillis());
-            ProjectStore.addProject(this, project);
+                String finalLanguage = projectType.equals("Game")
+                        ? (selectedGameLanguage.equals("Custom") ? customLanguagesText() : selectedGameLanguage)
+                        : selectedLanguage;
 
+               Project project = new Project(name, pkg, projectType, detail, finalLanguage, System.currentTimeMillis());
+               ProjectStore.addProject(this, project);
             Toast.makeText(this, projectType + " '" + name + "' created!", Toast.LENGTH_LONG).show();
 
             setResult(RESULT_OK);
