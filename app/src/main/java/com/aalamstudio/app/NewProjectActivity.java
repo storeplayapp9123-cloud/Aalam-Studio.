@@ -31,9 +31,9 @@ public class NewProjectActivity extends AppCompatActivity {
     private String selectedGameLanguage = "Java";
 
     private Set<String> selectedCustomPlatforms = new LinkedHashSet<>();
-    private Set<String> customLanguages = new LinkedHashSet<>();          // Android-only "Custom" game language
-    private Set<String> appCustomLanguages = new LinkedHashSet<>();       // Custom platform, App
-    private Set<String> gameCustomPlatformLanguages = new LinkedHashSet<>(); // Custom platform, Game
+    private Set<String> customLanguages = new LinkedHashSet<>();
+    private Set<String> appCustomLanguages = new LinkedHashSet<>();
+    private Set<String> gameCustomPlatformLanguages = new LinkedHashSet<>();
 
     private final String[] PLATFORMS = {"Android", "Windows", "macOS", "Linux", "iOS"};
     private final String[] ANDROID_GAME_LANGUAGES = {
@@ -219,7 +219,8 @@ public class NewProjectActivity extends AppCompatActivity {
                 detail = selectedOrientation + " - " + platformText + " - " + lang;
             }
 
-            Project project = new Project(name, pkg, projectType, detail, System.currentTimeMillis());
+            String finalLanguage = projectType.equals("Game") ? resolveGameLanguageText() : resolveAppLanguageText();
+            Project project = new Project(name, pkg, projectType, detail, finalLanguage, System.currentTimeMillis());
             ProjectStore.addProject(this, project);
 
             Toast.makeText(this, projectType + " '" + name + "' created!", Toast.LENGTH_LONG).show();
@@ -279,7 +280,6 @@ public class NewProjectActivity extends AppCompatActivity {
     }
 
     private void rebuildCustomPlatformLanguageLists() {
-        // App languages union
         appLanguageCustomCheckboxContainer.removeAllViews();
         appCustomLanguages.clear();
         Set<String> appUnion = new LinkedHashSet<>();
@@ -297,7 +297,6 @@ public class NewProjectActivity extends AppCompatActivity {
             appLanguageCustomCheckboxContainer.addView(cb);
         }
 
-        // Game languages union
         gameLanguageCustomPlatformCheckboxContainer.removeAllViews();
         gameCustomPlatformLanguages.clear();
         Set<String> gameUnion = new LinkedHashSet<>();
