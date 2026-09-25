@@ -45,6 +45,7 @@ public class ProjectStore {
                         obj.getString("type"),
                         obj.getString("detail"),
                         obj.optString("language", "Java"),
+                        obj.optString("platform", "Android"),
                         obj.getLong("timestamp")
                 ));
             }
@@ -81,6 +82,7 @@ public class ProjectStore {
                 obj.put("type", p.type);
                 obj.put("detail", p.detail);
                 obj.put("language", p.language);
+                obj.put("platform", p.platform);
                 obj.put("timestamp", p.timestamp);
                 array.put(obj);
             }
