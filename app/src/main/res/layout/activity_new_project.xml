@@ -220,9 +220,142 @@
                     android:textSize="11sp"
                     android:background="#1A1A1A"
                     android:padding="10dp"
-                    android:layout_marginBottom="12dp"/>
+                    android:layout_marginBottom="14dp"/>
 
-                <!-- Language: only relevant for App (Java/Kotlin/Dual) -->
+                <!-- Target Platform -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Target Platform"
+                    android:textColor="#AAAAAA"
+                    android:textSize="11sp"
+                    android:layout_marginBottom="6dp"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <LinearLayout
+                        android:id="@+id/platformAndroid"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:background="@drawable/bg_type_card"
+                        android:padding="6dp">
+
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🤖" android:textSize="16sp"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Android" android:textColor="#FFFFFF" android:textSize="9sp" android:layout_marginTop="2dp"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/platformWindows"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:background="@drawable/bg_type_card"
+                        android:padding="6dp">
+
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🪟" android:textSize="16sp"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Windows" android:textColor="#FFFFFF" android:textSize="9sp" android:layout_marginTop="2dp"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/platformMac"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:background="@drawable/bg_type_card"
+                        android:padding="6dp">
+
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🍎" android:textSize="16sp"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="macOS" android:textColor="#FFFFFF" android:textSize="9sp" android:layout_marginTop="2dp"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/platformLinux"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:background="@drawable/bg_type_card"
+                        android:padding="6dp">
+
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🐧" android:textSize="16sp"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Linux" android:textColor="#FFFFFF" android:textSize="9sp" android:layout_marginTop="2dp"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/platformIos"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:background="@drawable/bg_type_card"
+                        android:padding="6dp">
+
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📱" android:textSize="16sp"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="iOS" android:textColor="#FFFFFF" android:textSize="9sp" android:layout_marginTop="2dp"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/platformCustom"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:background="@drawable/bg_type_card"
+                        android:padding="6dp">
+
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⋯" android:textSize="16sp" android:textColor="@color/gold" android:textStyle="bold"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Custom" android:textColor="#FFFFFF" android:textSize="9sp" android:layout_marginTop="2dp"/>
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- Custom platform multi-select -->
+                <LinearLayout
+                    android:id="@+id/customPlatformContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_card"
+                    android:padding="10dp"
+                    android:layout_marginBottom="14dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Select platforms to target:"
+                        android:textColor="@color/text_primary"
+                        android:textSize="10sp"
+                        android:layout_marginBottom="6dp"/>
+
+                    <LinearLayout
+                        android:id="@+id/customPlatformCheckboxContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"/>
+
+                </LinearLayout>
+
+                <!-- App Language (dynamic, single-platform) -->
                 <LinearLayout
                     android:id="@+id/appLanguageContainer"
                     android:layout_width="match_parent"
@@ -239,61 +372,36 @@
                         android:layout_marginBottom="6dp"/>
 
                     <LinearLayout
+                        android:id="@+id/appLanguageGrid"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+                        android:orientation="vertical"/>
 
-                        <LinearLayout
-                            android:id="@+id/langJava"
-                            android:layout_width="0dp"
-                            android:layout_height="36dp"
-                            android:layout_weight="1"
-                            android:layout_marginEnd="6dp"
-                            android:gravity="center"
-                            android:background="@drawable/bg_type_card">
+                </LinearLayout>
 
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Java"
-                                android:textColor="#FFFFFF"
-                                android:textSize="11sp"/>
-                        </LinearLayout>
+                <!-- App Language (multi-platform custom) -->
+                <LinearLayout
+                    android:id="@+id/appLanguageCustomContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_card"
+                    android:padding="10dp"
+                    android:visibility="gone">
 
-                        <LinearLayout
-                            android:id="@+id/langKotlin"
-                            android:layout_width="0dp"
-                            android:layout_height="36dp"
-                            android:layout_weight="1"
-                            android:layout_marginEnd="6dp"
-                            android:gravity="center"
-                            android:background="@drawable/bg_type_card">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Select languages to combine:"
+                        android:textColor="@color/text_primary"
+                        android:textSize="10sp"
+                        android:layout_marginBottom="6dp"/>
 
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Kotlin"
-                                android:textColor="#FFFFFF"
-                                android:textSize="11sp"/>
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:id="@+id/langDual"
-                            android:layout_width="0dp"
-                            android:layout_height="36dp"
-                            android:layout_weight="1"
-                            android:gravity="center"
-                            android:background="@drawable/bg_type_card">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Dual"
-                                android:textColor="#FFFFFF"
-                                android:textSize="11sp"/>
-                        </LinearLayout>
-
-                    </LinearLayout>
+                    <LinearLayout
+                        android:id="@+id/appLanguageCustomCheckboxContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"/>
 
                 </LinearLayout>
 
@@ -494,7 +602,7 @@
                         android:textSize="11sp"
                         android:visibility="gone"/>
 
-                    <!-- Game Language grid -->
+                    <!-- Game Language (dynamic, single-platform) -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -510,7 +618,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical"/>
 
-                    <!-- Custom language multi-select -->
+                    <!-- Custom language multi-select (single platform "Custom" language card) -->
                     <LinearLayout
                         android:id="@+id/customLanguageContainer"
                         android:layout_width="match_parent"
@@ -531,6 +639,33 @@
 
                         <LinearLayout
                             android:id="@+id/customLanguageCheckboxContainer"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"/>
+
+                    </LinearLayout>
+
+                    <!-- Game Language (multi-platform custom) -->
+                    <LinearLayout
+                        android:id="@+id/gameLanguageCustomPlatformContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:background="@drawable/bg_card"
+                        android:padding="10dp"
+                        android:layout_marginTop="8dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Select languages to combine:"
+                            android:textColor="@color/text_primary"
+                            android:textSize="10sp"
+                            android:layout_marginBottom="6dp"/>
+
+                        <LinearLayout
+                            android:id="@+id/gameLanguageCustomPlatformCheckboxContainer"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"/>
