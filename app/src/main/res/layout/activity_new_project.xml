@@ -248,7 +248,7 @@
                         android:background="@drawable/bg_type_card"
                         android:padding="6dp">
 
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🤖" android:textSize="16sp"/>
+                        <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_platform_android"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Android" android:textColor="#FFFFFF" android:textSize="9sp" android:layout_marginTop="2dp"/>
                     </LinearLayout>
 
@@ -263,7 +263,7 @@
                         android:background="@drawable/bg_type_card"
                         android:padding="6dp">
 
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🪟" android:textSize="16sp"/>
+                        <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_platform_windows"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Windows" android:textColor="#FFFFFF" android:textSize="9sp" android:layout_marginTop="2dp"/>
                     </LinearLayout>
 
@@ -278,7 +278,7 @@
                         android:background="@drawable/bg_type_card"
                         android:padding="6dp">
 
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🍎" android:textSize="16sp"/>
+                        <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_platform_macos"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="macOS" android:textColor="#FFFFFF" android:textSize="9sp" android:layout_marginTop="2dp"/>
                     </LinearLayout>
 
@@ -293,7 +293,7 @@
                         android:background="@drawable/bg_type_card"
                         android:padding="6dp">
 
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🐧" android:textSize="16sp"/>
+                        <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_platform_linux"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Linux" android:textColor="#FFFFFF" android:textSize="9sp" android:layout_marginTop="2dp"/>
                     </LinearLayout>
 
@@ -308,7 +308,7 @@
                         android:background="@drawable/bg_type_card"
                         android:padding="6dp">
 
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📱" android:textSize="16sp"/>
+                        <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_platform_ios"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="iOS" android:textColor="#FFFFFF" android:textSize="9sp" android:layout_marginTop="2dp"/>
                     </LinearLayout>
 
@@ -322,7 +322,7 @@
                         android:background="@drawable/bg_type_card"
                         android:padding="6dp">
 
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⋯" android:textSize="16sp" android:textColor="@color/gold" android:textStyle="bold"/>
+                        <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_platform_custom"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Custom" android:textColor="#FFFFFF" android:textSize="9sp" android:layout_marginTop="2dp"/>
                     </LinearLayout>
 
