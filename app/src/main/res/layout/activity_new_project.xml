@@ -618,7 +618,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical"/>
 
-                    <!-- Custom language multi-select (single platform "Custom" language card) -->
+                    <!-- Custom language multi-select (Android "Custom" card) -->
                     <LinearLayout
                         android:id="@+id/customLanguageContainer"
                         android:layout_width="match_parent"
