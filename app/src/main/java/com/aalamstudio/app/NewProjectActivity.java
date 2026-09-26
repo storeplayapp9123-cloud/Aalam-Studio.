@@ -1,5 +1,6 @@
 package com.aalamstudio.app;
 
+import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -241,9 +242,6 @@ public class NewProjectActivity extends AppCompatActivity {
         boolean isCustom = platform.equals("Custom");
         customPlatformContainer.setVisibility(isCustom ? View.VISIBLE : View.GONE);
 
-        appLanguageContainer.setVisibility(isCustom ? View.GONE : View.VISIBLE);
-        appLanguageCustomContainer.setVisibility(isCustom ? View.VISIBLE : View.GONE);
-
         gameLanguageGrid.setVisibility(isCustom ? View.GONE : View.VISIBLE);
         customLanguageContainer.setVisibility(View.GONE);
         gameLanguageCustomPlatformContainer.setVisibility(isCustom ? View.VISIBLE : View.GONE);
@@ -255,15 +253,27 @@ public class NewProjectActivity extends AppCompatActivity {
             rebuildCustomPlatformLanguageLists();
         }
 
+        updateLanguageContainerVisibility();
         updatePreview();
+    }
+
+    private void updateLanguageContainerVisibility() {
+        boolean isCustomPlatform = selectedPlatform.equals("Custom");
+
+        if (projectType.equals("Game")) {
+            appLanguageContainer.setVisibility(View.GONE);
+            appLanguageCustomContainer.setVisibility(View.GONE);
+        } else {
+            appLanguageContainer.setVisibility(isCustomPlatform ? View.GONE : View.VISIBLE);
+            appLanguageCustomContainer.setVisibility(isCustomPlatform ? View.VISIBLE : View.GONE);
+        }
     }
 
     private void setupCustomPlatformCheckboxes() {
         for (String platform : PLATFORMS) {
             CheckBox cb = new CheckBox(this);
             cb.setText(platform);
-            cb.setTextColor(0xFFCCCCCC);
-            cb.setTextSize(10);
+            styleCheckbox(cb);
             cb.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isChecked) selectedCustomPlatforms.add(platform);
                 else selectedCustomPlatforms.remove(platform);
@@ -287,8 +297,7 @@ public class NewProjectActivity extends AppCompatActivity {
         for (String lang : appUnion) {
             CheckBox cb = new CheckBox(this);
             cb.setText(lang);
-            cb.setTextColor(0xFFCCCCCC);
-            cb.setTextSize(10);
+            styleCheckbox(cb);
             cb.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isChecked) appCustomLanguages.add(lang);
                 else appCustomLanguages.remove(lang);
@@ -304,8 +313,7 @@ public class NewProjectActivity extends AppCompatActivity {
         for (String lang : gameUnion) {
             CheckBox cb = new CheckBox(this);
             cb.setText(lang);
-            cb.setTextColor(0xFFCCCCCC);
-            cb.setTextSize(10);
+            styleCheckbox(cb);
             cb.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isChecked) gameCustomPlatformLanguages.add(lang);
                 else gameCustomPlatformLanguages.remove(lang);
@@ -313,6 +321,12 @@ public class NewProjectActivity extends AppCompatActivity {
             });
             gameLanguageCustomPlatformCheckboxContainer.addView(cb);
         }
+    }
+
+    private void styleCheckbox(CheckBox cb) {
+        cb.setTextColor(0xFFCCCCCC);
+        cb.setTextSize(10);
+        cb.setButtonTintList(ColorStateList.valueOf(0xFFD4AF37));
     }
 
     private String resolveAppLanguageText() {
@@ -445,8 +459,7 @@ public class NewProjectActivity extends AppCompatActivity {
         for (String lang : ANDROID_GAME_LANGUAGES) {
             CheckBox cb = new CheckBox(this);
             cb.setText(lang);
-            cb.setTextColor(0xFFCCCCCC);
-            cb.setTextSize(10);
+            styleCheckbox(cb);
             cb.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isChecked) customLanguages.add(lang);
                 else customLanguages.remove(lang);
@@ -506,6 +519,7 @@ public class NewProjectActivity extends AppCompatActivity {
             panelGameOptions.setVisibility(View.GONE);
         }
 
+        updateLanguageContainerVisibility();
         updateLocationPath();
         updatePreview();
     }
