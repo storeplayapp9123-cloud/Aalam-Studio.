@@ -220,7 +220,7 @@ public class NewProjectActivity extends AppCompatActivity {
             }
 
             String finalLanguage = projectType.equals("Game") ? resolveGameLanguageText() : resolveAppLanguageText();
-            Project project = new Project(name, pkg, projectType, detail, finalLanguage, System.currentTimeMillis());
+            Project project = new Project(name, pkg, projectType, detail, finalLanguage, platformText, System.currentTimeMillis());
             ProjectStore.addProject(this, project);
 
             Toast.makeText(this, projectType + " '" + name + "' created!", Toast.LENGTH_LONG).show();
