@@ -20,7 +20,6 @@
             android:textStyle="bold"
             android:layout_marginBottom="14dp"/>
 
-        <!-- 1. Choose Project Type -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -142,7 +141,6 @@
 
         </LinearLayout>
 
-        <!-- 2-column: Details (left) + Type options (right) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -222,7 +220,6 @@
                     android:padding="10dp"
                     android:layout_marginBottom="14dp"/>
 
-                <!-- Target Platform -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -328,7 +325,6 @@
 
                 </LinearLayout>
 
-                <!-- Custom platform multi-select -->
                 <LinearLayout
                     android:id="@+id/customPlatformContainer"
                     android:layout_width="match_parent"
@@ -355,7 +351,6 @@
 
                 </LinearLayout>
 
-                <!-- App Language (dynamic, single-platform) -->
                 <LinearLayout
                     android:id="@+id/appLanguageContainer"
                     android:layout_width="match_parent"
@@ -377,9 +372,34 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical"/>
 
+                    <LinearLayout
+                        android:id="@+id/appLanguageCustomInlineContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:background="@drawable/bg_card"
+                        android:padding="10dp"
+                        android:layout_marginTop="8dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Select languages to combine:"
+                            android:textColor="@color/text_primary"
+                            android:textSize="10sp"
+                            android:layout_marginBottom="6dp"/>
+
+                        <LinearLayout
+                            android:id="@+id/appLanguageCustomInlineCheckboxContainer"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"/>
+
+                    </LinearLayout>
+
                 </LinearLayout>
 
-                <!-- App Language (multi-platform custom) -->
                 <LinearLayout
                     android:id="@+id/appLanguageCustomContainer"
                     android:layout_width="match_parent"
@@ -423,7 +443,6 @@
                     android:textStyle="bold"
                     android:layout_marginBottom="8dp"/>
 
-                <!-- App-only options -->
                 <LinearLayout
                     android:id="@+id/panelAppOptions"
                     android:layout_width="match_parent"
@@ -480,7 +499,6 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- Game-only options -->
                 <LinearLayout
                     android:id="@+id/panelGameOptions"
                     android:layout_width="match_parent"
@@ -602,7 +620,6 @@
                         android:textSize="11sp"
                         android:visibility="gone"/>
 
-                    <!-- Game Language (dynamic, single-platform) -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -618,7 +635,6 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical"/>
 
-                    <!-- Custom language multi-select (Android "Custom" card) -->
                     <LinearLayout
                         android:id="@+id/customLanguageContainer"
                         android:layout_width="match_parent"
@@ -645,7 +661,6 @@
 
                     </LinearLayout>
 
-                    <!-- Game Language (multi-platform custom) -->
                     <LinearLayout
                         android:id="@+id/gameLanguageCustomPlatformContainer"
                         android:layout_width="match_parent"
@@ -674,7 +689,6 @@
 
                 </LinearLayout>
 
-                <!-- Preview card -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -716,7 +730,6 @@
 
         </LinearLayout>
 
-        <!-- Buttons -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
