@@ -61,6 +61,7 @@ public class NewProjectActivity extends AppCompatActivity {
     private LinearLayout appLanguageContainer, appLanguageGrid;
     private LinearLayout[] appLangCards;
     private LinearLayout appLanguageCustomContainer, appLanguageCustomCheckboxContainer;
+    private LinearLayout appLanguageCustomInlineContainer, appLanguageCustomInlineCheckboxContainer;
 
     private LinearLayout gameLanguageGrid;
     private LinearLayout[] gameLangCards;
@@ -165,6 +166,8 @@ public class NewProjectActivity extends AppCompatActivity {
         appLanguageGrid = findViewById(R.id.appLanguageGrid);
         appLanguageCustomContainer = findViewById(R.id.appLanguageCustomContainer);
         appLanguageCustomCheckboxContainer = findViewById(R.id.appLanguageCustomCheckboxContainer);
+        appLanguageCustomInlineContainer = findViewById(R.id.appLanguageCustomInlineContainer);
+        appLanguageCustomInlineCheckboxContainer = findViewById(R.id.appLanguageCustomInlineCheckboxContainer);
 
         gameLanguageGrid = findViewById(R.id.gameLanguageGrid);
         customLanguageContainer = findViewById(R.id.customLanguageContainer);
@@ -180,7 +183,6 @@ public class NewProjectActivity extends AppCompatActivity {
         platformCustom.setOnClickListener(v -> selectPlatform(platformCustom, "Custom"));
 
         setupCustomPlatformCheckboxes();
-        setupAndroidCustomLanguageCheckboxes();
 
         selectPlatform(platformAndroid, "Android");
 
@@ -334,6 +336,10 @@ public class NewProjectActivity extends AppCompatActivity {
             if (appCustomLanguages.isEmpty()) return "Custom (none selected)";
             return String.join(" + ", new ArrayList<>(appCustomLanguages));
         }
+        if (selectedAppLanguage.equals("Custom")) {
+            if (appCustomLanguages.isEmpty()) return "Custom (none selected)";
+            return String.join(" + ", new ArrayList<>(appCustomLanguages));
+        }
         return selectedAppLanguage;
     }
 
@@ -367,13 +373,18 @@ public class NewProjectActivity extends AppCompatActivity {
         }
     }
 
-    // ===== App language grid (single platform) =====
+    // ===== App language grid (single platform, with inline Custom) =====
 
     private void buildAppLanguageGrid() {
         appLanguageGrid.removeAllViews();
-        List<String> langs = getAppLanguages(selectedPlatform);
+        appLanguageCustomInlineContainer.setVisibility(View.GONE);
 
-        appLangCards = new LinearLayout[langs.size()];
+        List<String> langs = getAppLanguages(selectedPlatform);
+        String defaultLang = langs.get(0);
+
+        int total = langs.size() + 1;
+        appLangCards = new LinearLayout[total];
+
         LinearLayout row = null;
         for (int i = 0; i < langs.size(); i++) {
             if (i % 3 == 0) {
@@ -383,13 +394,44 @@ public class NewProjectActivity extends AppCompatActivity {
             String lang = langs.get(i);
             LinearLayout card = buildLangCard(lang, (c, l) -> {
                 selectAppLanguage(c, l);
+                appLanguageCustomInlineContainer.setVisibility(View.GONE);
                 updatePreview();
             });
             row.addView(card);
             appLangCards[i] = card;
         }
 
-        selectAppLanguage(appLangCards[0], langs.get(0));
+        if (langs.size() % 3 == 0) {
+            row = newGridRow();
+            appLanguageGrid.addView(row);
+        }
+        LinearLayout customCard = buildLangCard("Custom", (c, l) -> {
+            selectAppLanguage(c, l);
+            appLanguageCustomInlineContainer.setVisibility(View.VISIBLE);
+            updatePreview();
+        });
+        row.addView(customCard);
+        appLangCards[langs.size()] = customCard;
+
+        setupAppInlineCustomCheckboxes(langs);
+
+        selectAppLanguage(appLangCards[0], defaultLang);
+    }
+
+    private void setupAppInlineCustomCheckboxes(List<String> langs) {
+        appLanguageCustomInlineCheckboxContainer.removeAllViews();
+        appCustomLanguages.clear();
+        for (String lang : langs) {
+            CheckBox cb = new CheckBox(this);
+            cb.setText(lang);
+            styleCheckbox(cb);
+            cb.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                if (isChecked) appCustomLanguages.add(lang);
+                else appCustomLanguages.remove(lang);
+                updatePreview();
+            });
+            appLanguageCustomInlineCheckboxContainer.addView(cb);
+        }
     }
 
     private void selectAppLanguage(LinearLayout selected, String lang) {
@@ -399,17 +441,16 @@ public class NewProjectActivity extends AppCompatActivity {
         selectedAppLanguage = lang;
     }
 
-    // ===== Game language grid (single platform) =====
+    // ===== Game language grid (single platform, with inline Custom) =====
 
     private void buildGameLanguageGrid() {
         gameLanguageGrid.removeAllViews();
         customLanguageContainer.setVisibility(View.GONE);
 
         List<String> langs = getGameLanguages(selectedPlatform);
-        boolean showCustomCard = selectedPlatform.equals("Android");
         String defaultLang = selectedPlatform.equals("Android") ? "Java" : langs.get(0);
 
-        int total = langs.size() + (showCustomCard ? 1 : 0);
+        int total = langs.size() + 1;
         gameLangCards = new LinearLayout[total];
 
         LinearLayout row = null;
@@ -431,32 +472,27 @@ public class NewProjectActivity extends AppCompatActivity {
             gameLangCards[i] = card;
         }
 
-        if (showCustomCard) {
-            LinearLayout customRow = newGridRow();
-            gameLanguageGrid.addView(customRow);
-            LinearLayout customCard = buildLangCard("Custom", (c, l) -> {
-                selectGameLanguage(c, l);
-                customLanguageContainer.setVisibility(View.VISIBLE);
-                updatePreview();
-            });
-            customRow.addView(customCard);
-            gameLangCards[langs.size()] = customCard;
+        if (langs.size() % 3 == 0) {
+            row = newGridRow();
+            gameLanguageGrid.addView(row);
         }
+        LinearLayout customCard = buildLangCard("Custom", (c, l) -> {
+            selectGameLanguage(c, l);
+            customLanguageContainer.setVisibility(View.VISIBLE);
+            updatePreview();
+        });
+        row.addView(customCard);
+        gameLangCards[langs.size()] = customCard;
+
+        setupGameInlineCustomCheckboxes(langs);
 
         selectGameLanguage(gameLangCards[defaultIndex], defaultLang);
     }
 
-    private void selectGameLanguage(LinearLayout selected, String lang) {
-        if (gameLangCards != null) {
-            for (LinearLayout card : gameLangCards) {
-                if (card != null) card.setSelected(card == selected);
-            }
-        }
-        selectedGameLanguage = lang;
-    }
-
-    private void setupAndroidCustomLanguageCheckboxes() {
-        for (String lang : ANDROID_GAME_LANGUAGES) {
+    private void setupGameInlineCustomCheckboxes(List<String> langs) {
+        customLanguageCheckboxContainer.removeAllViews();
+        customLanguages.clear();
+        for (String lang : langs) {
             CheckBox cb = new CheckBox(this);
             cb.setText(lang);
             styleCheckbox(cb);
@@ -467,6 +503,15 @@ public class NewProjectActivity extends AppCompatActivity {
             });
             customLanguageCheckboxContainer.addView(cb);
         }
+    }
+
+    private void selectGameLanguage(LinearLayout selected, String lang) {
+        if (gameLangCards != null) {
+            for (LinearLayout card : gameLangCards) {
+                if (card != null) card.setSelected(card == selected);
+            }
+        }
+        selectedGameLanguage = lang;
     }
 
     private String customLanguagesText() {
