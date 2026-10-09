@@ -1,19 +1,30 @@
 package com.aalamstudio.app;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 public class ProjectEditorActivity extends AppCompatActivity {
 
@@ -21,11 +32,15 @@ public class ProjectEditorActivity extends AppCompatActivity {
     public static final String EXTRA_PROJECT_TYPE = "project_type";
     public static final String EXTRA_PROJECT_LANGUAGE = "project_language";
     public static final String EXTRA_PROJECT_PLATFORM = "project_platform";
+    public static final String EXTRA_PROJECT_PACKAGE = "project_package";
+
+    private static final String COMPILER_PACKAGE = "com.aalamstudio.compiler";
 
     private String projectName = "My Project";
     private String projectType = "App";
     private String projectLanguage = "Java";
     private String projectPlatform = "Android";
+    private String projectPackage = "com.example.app";
 
     private EditText codeEditorText;
     private TextView openFileTabLabel;
@@ -37,6 +52,11 @@ public class ProjectEditorActivity extends AppCompatActivity {
     private String defaultOpenKey = null;
 
     private SharedPreferences codePrefs;
+
+    private LinearLayout fileTreePanel;
+    private ScrollView fileTreeScroll;
+    private TextView toggleFileTreePanel;
+    private boolean fileTreeExpanded = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,6 +75,9 @@ public class ProjectEditorActivity extends AppCompatActivity {
         String plat = getIntent().getStringExtra(EXTRA_PROJECT_PLATFORM);
         if (plat != null) projectPlatform = plat;
 
+        String pkg = getIntent().getStringExtra(EXTRA_PROJECT_PACKAGE);
+        if (pkg != null) projectPackage = pkg;
+
         codePrefs = getSharedPreferences("aalam_code_" + projectName, MODE_PRIVATE);
 
         TextView editorProjectName = findViewById(R.id.editorProjectName);
@@ -70,6 +93,12 @@ public class ProjectEditorActivity extends AppCompatActivity {
         btnSaveFile.setOnClickListener(v -> {
             saveCurrentFile();
             Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show();
+        });
+
+        TextView btnCheckErrors = findViewById(R.id.btnCheckErrors);
+        btnCheckErrors.setOnClickListener(v -> {
+            saveCurrentFile();
+            checkErrorsInCurrentFile();
         });
 
         Button btnRun = findViewById(R.id.btnRun);
@@ -90,8 +119,22 @@ public class ProjectEditorActivity extends AppCompatActivity {
 
         btnBuildApk.setOnClickListener(v -> {
             saveCurrentFile();
-            buildLogText.setText("Aalam Compiler not connected yet.\nBuild APK will work once the compiler module is ready.");
-            Toast.makeText(this, "Build APK - coming soon", Toast.LENGTH_SHORT).show();
+            buildLogText.setText("Packaging project into .asc file...");
+            exportAsc(buildLogText);
+        });
+
+        fileTreePanel = findViewById(R.id.fileTreePanel);
+        fileTreeScroll = findViewById(R.id.fileTreeScroll);
+        toggleFileTreePanel = findViewById(R.id.toggleFileTreePanel);
+
+        toggleFileTreePanel.setOnClickListener(v -> {
+            fileTreeExpanded = !fileTreeExpanded;
+            fileTreeScroll.setVisibility(fileTreeExpanded ? View.VISIBLE : View.GONE);
+            toggleFileTreePanel.setText(fileTreeExpanded ? "▾" : "▸");
+
+            ViewGroup.LayoutParams params = fileTreePanel.getLayoutParams();
+            params.width = dp(fileTreeExpanded ? 150 : 40);
+            fileTreePanel.setLayoutParams(params);
         });
 
         setupTabs();
@@ -106,6 +149,260 @@ public class ProjectEditorActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         saveCurrentFile();
+    }
+
+    // ===== Error checking =====
+
+    private void checkErrorsInCurrentFile() {
+        if (currentFileKey == null) return;
+
+        LinearLayout buildLogPanel = findViewById(R.id.buildLogPanel);
+        TextView buildLogText = findViewById(R.id.buildLogText);
+        TextView btnToggleBuildPanel = findViewById(R.id.btnToggleBuildPanel);
+
+        buildLogPanel.setVisibility(View.VISIBLE);
+        btnToggleBuildPanel.setText("⌃");
+
+        String content = codeEditorText.getText().toString();
+        String fileName = currentFileKey.contains("::") ? currentFileKey.split("::", 2)[1] : currentFileKey;
+
+        List<String> errors = runBasicChecks(fileName, content);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("Checking ").append(fileName).append(" ...\n\n");
+
+        if (errors.isEmpty()) {
+            sb.append("✅ No issues found.");
+        } else {
+            sb.append("⚠ ").append(errors.size()).append(" issue(s) found:\n\n");
+            for (String e : errors) {
+                sb.append("• ").append(e).append("\n");
+            }
+        }
+
+        buildLogText.setText(sb.toString());
+    }
+
+    private List<String> runBasicChecks(String fileName, String content) {
+        List<String> errors = new ArrayList<>();
+        String ext = fileName.contains(".") ? fileName.substring(fileName.lastIndexOf('.') + 1) : "";
+
+        checkBracketBalance(content, errors, '{', '}');
+        checkBracketBalance(content, errors, '(', ')');
+        checkBracketBalance(content, errors, '[', ']');
+        checkUnclosedQuotes(content, errors);
+
+        switch (ext) {
+            case "java":
+                checkJavaBasics(content, errors);
+                break;
+            case "xml":
+                checkXmlBasics(content, errors);
+                break;
+            case "json":
+                checkJsonBasics(content, errors);
+                break;
+            case "kt":
+                checkKotlinBasics(content, errors);
+                break;
+        }
+
+        return errors;
+    }
+
+    private void checkBracketBalance(String content, List<String> errors, char open, char close) {
+        int depth = 0;
+        int line = 1;
+        boolean inString = false;
+        char stringChar = 0;
+
+        for (int i = 0; i < content.length(); i++) {
+            char c = content.charAt(i);
+            if (c == '\n') line++;
+
+            if (inString) {
+                if (c == stringChar && (i == 0 || content.charAt(i - 1) != '\\')) inString = false;
+                continue;
+            }
+            if (c == '"' || c == '\'') {
+                inString = true;
+                stringChar = c;
+                continue;
+            }
+
+            if (c == open) depth++;
+            else if (c == close) {
+                depth--;
+                if (depth < 0) {
+                    errors.add("Unexpected '" + close + "' near line " + line + " (no matching '" + open + "')");
+                    depth = 0;
+                }
+            }
+        }
+
+        if (depth > 0) {
+            errors.add("Missing " + depth + " closing '" + close + "' — check your " + open + " blocks");
+        }
+    }
+
+    private void checkUnclosedQuotes(String content, List<String> errors) {
+        boolean inDouble = false;
+        boolean inSingle = false;
+
+        for (int i = 0; i < content.length(); i++) {
+            char c = content.charAt(i);
+            boolean escaped = i > 0 && content.charAt(i - 1) == '\\';
+            if (c == '"' && !inSingle && !escaped) inDouble = !inDouble;
+            else if (c == '\'' && !inDouble && !escaped) inSingle = !inSingle;
+        }
+
+        if (inDouble) errors.add("Unclosed double-quote (\") somewhere in the file");
+        if (inSingle) errors.add("Unclosed single-quote (') somewhere in the file");
+    }
+
+    private void checkJavaBasics(String content, List<String> errors) {
+        String[] lines = content.split("\n");
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i].trim();
+            if (line.isEmpty()) continue;
+            if (line.startsWith("//") || line.startsWith("*") || line.startsWith("/*")) continue;
+            if (line.startsWith("@") || line.startsWith("import ") || line.startsWith("package ")) continue;
+
+            boolean endsOk = line.endsWith(";") || line.endsWith("{") || line.endsWith("}")
+                    || line.endsWith(",") || line.endsWith("(") || line.endsWith(":");
+
+            boolean looksLikeStatement = (line.contains("=") || line.matches(".*\\b(return|break|continue)\\b.*"))
+                    && !line.contains("//");
+
+            if (looksLikeStatement && !endsOk) {
+                errors.add("Line " + (i + 1) + ": possibly missing ';' → \"" + truncate(line) + "\"");
+            }
+        }
+
+        if (!content.contains("class ") && !content.contains("interface ") && !content.contains("enum ")) {
+            errors.add("No class/interface/enum declaration found in this Java file");
+        }
+    }
+
+    private void checkKotlinBasics(String content, List<String> errors) {
+        if (!content.contains("class ") && !content.contains("fun ") && !content.contains("object ")) {
+            errors.add("No class/fun/object declaration found in this Kotlin file");
+        }
+    }
+
+    private void checkXmlBasics(String content, List<String> errors) {
+        if (!content.trim().startsWith("<?xml") && !content.trim().startsWith("<")) {
+            errors.add("File doesn't start with an XML declaration or tag");
+        }
+
+        int openTags = 0;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("</?[a-zA-Z][^>]*?(/?)>").matcher(content);
+        while (m.find()) {
+            String tag = m.group();
+            boolean selfClosing = tag.endsWith("/>");
+            boolean closing = tag.startsWith("</");
+            if (!selfClosing) {
+                if (closing) openTags--;
+                else openTags++;
+            }
+        }
+        if (openTags != 0) {
+            errors.add("XML tags don't look balanced (possible missing closing tag)");
+        }
+    }
+
+    private void checkJsonBasics(String content, List<String> errors) {
+        String trimmed = content.trim();
+        if (trimmed.isEmpty()) {
+            errors.add("File is empty");
+            return;
+        }
+        if (!(trimmed.startsWith("{") && trimmed.endsWith("}")) &&
+            !(trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+            errors.add("JSON should start/end with matching { } or [ ]");
+        }
+        try {
+            if (trimmed.startsWith("{")) new JSONObject(trimmed);
+            else if (trimmed.startsWith("[")) new JSONArray(trimmed);
+        } catch (Exception e) {
+            errors.add("Invalid JSON: " + e.getMessage());
+        }
+    }
+
+    private String truncate(String s) {
+        return s.length() > 50 ? s.substring(0, 50) + "..." : s;
+    }
+
+    // ===== .asc export =====
+
+    private void exportAsc(TextView buildLogText) {
+        try {
+            JSONObject manifest = new JSONObject();
+            manifest.put("name", projectName);
+            manifest.put("package", projectPackage);
+            manifest.put("type", projectType);
+            manifest.put("language", projectLanguage);
+            manifest.put("platform", projectPlatform);
+            manifest.put("createdBy", "Aalam Studio");
+
+            JSONArray filesArray = new JSONArray();
+            for (String key : fileContents.keySet()) {
+                filesArray.put(key.replace("::", "/"));
+            }
+            manifest.put("files", filesArray);
+
+            File ascDir = new File(getExternalFilesDir(null), "asc");
+            if (!ascDir.exists()) ascDir.mkdirs();
+
+            String safePlatform = projectPlatform.replaceAll("[^a-zA-Z0-9]+", "-");
+            String safeName = projectName.replaceAll("[^a-zA-Z0-9]+", "-");
+            File ascFile = new File(ascDir, safeName + "-" + safePlatform + ".asc");
+
+            FileOutputStream fos = new FileOutputStream(ascFile);
+            ZipOutputStream zos = new ZipOutputStream(fos);
+
+            ZipEntry manifestEntry = new ZipEntry("manifest.json");
+            zos.putNextEntry(manifestEntry);
+            zos.write(manifest.toString(2).getBytes());
+            zos.closeEntry();
+
+            for (Map.Entry<String, String> entry : fileContents.entrySet()) {
+                String path = "src/" + entry.getKey().replace("::", "/");
+                ZipEntry fileEntry = new ZipEntry(path);
+                zos.putNextEntry(fileEntry);
+                zos.write(entry.getValue().getBytes());
+                zos.closeEntry();
+            }
+
+            zos.close();
+            fos.close();
+
+            buildLogText.setText("Saved: " + ascFile.getName() + "\nOpening Aalam Compiler...");
+            openWithAalamCompiler(ascFile);
+
+        } catch (Exception e) {
+            buildLogText.setText("Export failed: " + e.getMessage());
+            Toast.makeText(this, "Export failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void openWithAalamCompiler(File ascFile) {
+        Uri ascUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", ascFile);
+
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setDataAndType(ascUri, "application/octet-stream");
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        intent.setPackage(COMPILER_PACKAGE);
+
+        try {
+            startActivity(intent);
+        } catch (Exception e) {
+            Intent chooser = new Intent(Intent.ACTION_VIEW);
+            chooser.setDataAndType(ascUri, "application/octet-stream");
+            chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            Toast.makeText(this, "Aalam Compiler not found — pick an app to open .asc", Toast.LENGTH_LONG).show();
+            startActivity(Intent.createChooser(chooser, "Open with Aalam Compiler"));
+        }
     }
 
     // ===== File tree building (per platform, collapsible) =====
