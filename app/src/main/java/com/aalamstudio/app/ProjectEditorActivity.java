@@ -342,7 +342,19 @@ public class ProjectEditorActivity extends AppCompatActivity {
             manifest.put("package", projectPackage);
             manifest.put("type", projectType);
             manifest.put("language", projectLanguage);
-            manifest.put("platform", projectPlatform);
+
+            String platformLower = projectPlatform.toLowerCase().trim();
+            manifest.put("platform", platformLower);
+
+            JSONArray platformsArray = new JSONArray();
+            for (String p : splitList(projectPlatform)) {
+                platformsArray.put(p.toLowerCase().trim());
+            }
+            if (platformsArray.length() == 0) {
+                platformsArray.put(platformLower);
+            }
+            manifest.put("platforms", platformsArray);
+
             manifest.put("createdBy", "Aalam Studio");
 
             JSONArray filesArray = new JSONArray();
