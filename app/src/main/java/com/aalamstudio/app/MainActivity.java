@@ -255,6 +255,7 @@ public class MainActivity extends AppCompatActivity {
             intent.putExtra(ProjectEditorActivity.EXTRA_PROJECT_TYPE, p.type);
             intent.putExtra(ProjectEditorActivity.EXTRA_PROJECT_LANGUAGE, p.language);
             intent.putExtra(ProjectEditorActivity.EXTRA_PROJECT_PLATFORM, p.platform);
+            intent.putExtra(ProjectEditorActivity.EXTRA_PROJECT_PACKAGE, p.packageName);
             startActivity(intent);
         });
 
