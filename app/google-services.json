@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "244557305507",
+    "project_id": "aalam-studio-dc06a",
+    "storage_bucket": "aalam-studio-dc06a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:244557305507:android:43ba7d3020ad012c84d116",
+        "android_client_info": {
+          "package_name": "com.aalamstudio.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "244557305507-u3flikqc3hoqvqvbjtt9g9vavb1roo11.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.aalamstudio.app",
+            "certificate_hash": "5f99ae309fc094bd31320750079f5367362fb387"
+          }
+        },
+        {
+          "client_id": "244557305507-bjenk7eelodg70sh9e5vb027j7geefv1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCmvhFQnhBQ_-J8UtDYN43ikQl5PYSJrXw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "244557305507-bjenk7eelodg70sh9e5vb027j7geefv1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
