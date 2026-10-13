@@ -12,4 +12,5 @@
     <string name="welcome_title">Welcome Creator</string>
     <string name="create_app">Create App</string>
     <string name="create_game">Create Game</string>
+    <string name="default_web_client_id">244557305507-bjenk7eelodg70sh9e5vb027j7geefv1.apps.googleusercontent.com</string>
 </resources>
