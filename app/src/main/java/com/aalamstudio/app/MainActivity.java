@@ -45,6 +45,16 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // --- LOGIN CHECK - SABSE PEHLE ---
+        CloudSync.init();
+        if (!CloudSync.isSignedIn()) {
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+            return;
+        }
+        // --- LOGIN CHECK END ---
+
         setContentView(R.layout.activity_main);
 
         panelHome = findViewById(R.id.panelHome);
@@ -103,7 +113,13 @@ public class MainActivity extends AppCompatActivity {
         navTutorials.setOnClickListener(v -> selectNav(navTutorials, () -> showPanel(panelPlaceholder, "Tutorials")));
         navCommunity.setOnClickListener(v -> selectNav(navCommunity, () -> showPanel(panelPlaceholder, "Community")));
         navTools.setOnClickListener(v -> selectNav(navTools, () -> showPanel(panelPlaceholder, "Tools")));
-        navSettings.setOnClickListener(v -> selectNav(navSettings, () -> showPanel(panelPlaceholder, "Settings")));
+
+        // --- SETTINGS = SIGN OUT ---
+        navSettings.setOnClickListener(v -> selectNav(navSettings, () -> {
+            CloudSync.signOut();
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+        }));
 
         selectNav(navHome, () -> showPanel(panelHome, null));
 
