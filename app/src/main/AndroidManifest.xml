@@ -8,7 +8,7 @@
         android:theme="@style/Theme.AalamStudio">
 
         <activity
-            android:name=".MainActivity"
+            android:name=".LoginActivity"
             android:exported="true"
             android:screenOrientation="landscape">
             <intent-filter>
@@ -16,6 +16,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"/>
 
         <activity
             android:name=".NewProjectActivity"
