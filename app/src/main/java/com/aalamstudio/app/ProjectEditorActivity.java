@@ -2,8 +2,11 @@ package com.aalamstudio.app;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -16,13 +19,18 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -36,6 +44,11 @@ public class ProjectEditorActivity extends AppCompatActivity {
 
     private static final String COMPILER_PACKAGE = "com.aalamstudio.compiler";
 
+    private static final Set<String> TEXT_EXT = new HashSet<>(Arrays.asList(
+            "java", "kt", "xml", "json", "txt", "md", "c", "cpp", "cc", "h", "hpp", "cs",
+            "swift", "m", "lua", "js", "py", "go", "dart", "hlsl", "glsl", "gradle",
+            "properties", "html", "css", "yml", "yaml", "sh", "csv"));
+
     private String projectName = "My Project";
     private String projectType = "App";
     private String projectLanguage = "Java";
@@ -45,18 +58,22 @@ public class ProjectEditorActivity extends AppCompatActivity {
     private EditText codeEditorText;
     private TextView openFileTabLabel;
 
-    private Map<String, String> fileContents = new LinkedHashMap<>();
-    private Map<String, TextView> fileItemViews = new LinkedHashMap<>();
+    // real project folder on disk + currently open file
+    private File projectRoot;
+    private File currentFile = null;
+    private Set<String> expandedDirs = new HashSet<>();
+    private java.util.Map<String, TextView> fileItemViews = new java.util.HashMap<>();
     private TextView selectedFileItem;
-    private String currentFileKey = null;
-    private String defaultOpenKey = null;
 
-    private SharedPreferences codePrefs;
+    private SharedPreferences codePrefs; // only used to migrate old saved code
 
     private LinearLayout fileTreePanel;
     private ScrollView fileTreeScroll;
     private TextView toggleFileTreePanel;
     private boolean fileTreeExpanded = true;
+
+    private LivePreviewPanel preview; // null if layout has no livePreviewContainer
+    private FileContextMenu menu;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -138,10 +155,18 @@ public class ProjectEditorActivity extends AppCompatActivity {
         });
 
         setupTabs();
-        buildFileTree();
+        setupProjectFolder();
+        setupLivePreview();
+        setupContextMenu();
+        setupEditorWatcher();
 
-        if (defaultOpenKey != null) {
-            openFile(defaultOpenKey);
+        File first = findDefaultFile(projectRoot);
+        if (first != null) {
+            expandAncestors(first);
+        }
+        refreshFileTree();
+        if (first != null) {
+            openFile(first);
         }
     }
 
@@ -151,10 +176,409 @@ public class ProjectEditorActivity extends AppCompatActivity {
         saveCurrentFile();
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (menu != null && menu.handleActivityResult(requestCode, resultCode, data)) {
+            return;
+        }
+        super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    // ===== Project folder (real files on disk) =====
+
+    private void setupProjectFolder() {
+        File base = getExternalFilesDir(null);
+        if (base == null) base = getFilesDir();
+        projectRoot = new File(base, "projects/" + projectName.replaceAll("[^a-zA-Z0-9._-]+", "_"));
+
+        if (!projectRoot.exists()) {
+            projectRoot.mkdirs();
+            seedProject(); // first time: create default files (old saved code is migrated)
+        }
+    }
+
+    private void seedProject() {
+        List<String> platforms = splitList(projectPlatform);
+        if (platforms.isEmpty()) platforms.add("Android");
+
+        List<String> chosenLanguages = splitList(projectLanguage);
+
+        for (String platform : platforms) {
+            List<String> languages = intersectLanguages(platform, chosenLanguages);
+            if (languages.isEmpty()) {
+                languages = new ArrayList<>();
+                languages.add(defaultLanguageFor(platform));
+            }
+            seedPlatform(platform, languages);
+        }
+    }
+
+    private void seed(String platform, String fileName, String content) {
+        String text = codePrefs.getString(platform + "::" + fileName, content);
+        File f = new File(new File(projectRoot, platform), fileName);
+        try {
+            File parent = f.getParentFile();
+            if (parent != null) parent.mkdirs();
+            writeText(f, text);
+        } catch (IOException e) {
+            Toast.makeText(this, "File nahi bani: " + fileName, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void seedPlatform(String platform, List<String> languages) {
+        boolean isAndroid = platform.equals("Android");
+
+        if (projectType.equals("Game")) {
+            seed(platform, "GameManifest.xml",
+                    "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
+                    "<game-manifest>\n" +
+                    "    <name>" + projectName + "</name>\n" +
+                    "    <platform>" + platform + "</platform>\n" +
+                    "    <engine>Aalam Game Engine</engine>\n" +
+                    "</game-manifest>");
+
+            for (String lang : languages) {
+                seed(platform, "GameMain." + getExtension(lang), buildGameMainContent(lang));
+            }
+
+            seed(platform, "game_config.json",
+                    "{\n" +
+                    "  \"gameName\": \"" + projectName + "\",\n" +
+                    "  \"engine\": \"Aalam Game Engine\",\n" +
+                    "  \"platform\": \"" + platform + "\",\n" +
+                    "  \"language\": \"" + String.join(" + ", languages) + "\"\n" +
+                    "}");
+        } else {
+            if (isAndroid) {
+                seed(platform, "AndroidManifest.xml",
+                        "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
+                        "<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\">\n\n" +
+                        "    <application android:label=\"@string/app_name\">\n" +
+                        "        <activity android:name=\".MainActivity\" android:exported=\"true\">\n" +
+                        "            <intent-filter>\n" +
+                        "                <action android:name=\"android.intent.action.MAIN\" />\n" +
+                        "                <category android:name=\"android.intent.category.LAUNCHER\" />\n" +
+                        "            </intent-filter>\n" +
+                        "        </activity>\n" +
+                        "    </application>\n" +
+                        "</manifest>");
+            } else {
+                seed(platform, "app_config.json",
+                        "{\n" +
+                        "  \"appName\": \"" + projectName + "\",\n" +
+                        "  \"platform\": \"" + platform + "\",\n" +
+                        "  \"language\": \"" + String.join(" + ", languages) + "\"\n" +
+                        "}");
+            }
+
+            for (String lang : languages) {
+                String fileName = (isAndroid ? "MainActivity." : "Main.") + getExtension(lang);
+                seed(platform, fileName, buildAppMainContent(lang, isAndroid));
+            }
+
+            if (isAndroid) {
+                seed(platform, "activity_main.xml",
+                        "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
+                        "<LinearLayout xmlns:android=\"http://schemas.android.com/apk/res/android\"\n" +
+                        "    android:layout_width=\"match_parent\"\n" +
+                        "    android:layout_height=\"match_parent\"\n" +
+                        "    android:gravity=\"center\">\n\n" +
+                        "    <TextView\n" +
+                        "        android:layout_width=\"wrap_content\"\n" +
+                        "        android:layout_height=\"wrap_content\"\n" +
+                        "        android:text=\"Hello World!\" />\n\n" +
+                        "</LinearLayout>");
+            }
+        }
+    }
+
+    private File findDefaultFile(File dir) {
+        File[] kids = dir.listFiles();
+        if (kids == null) return null;
+        Arrays.sort(kids);
+        File firstText = null;
+        for (File f : kids) {
+            if (f.isDirectory()) {
+                File r = findDefaultFile(f);
+                if (r != null && isMainFile(r)) return r;
+                if (firstText == null) firstText = r;
+            } else if (isMainFile(f)) {
+                return f;
+            } else if (firstText == null && isTextFile(f)) {
+                firstText = f;
+            }
+        }
+        return firstText;
+    }
+
+    private boolean isMainFile(File f) {
+        String n = f.getName();
+        return n.startsWith("MainActivity.") || n.startsWith("GameMain.") || n.startsWith("Main.");
+    }
+
+    private void expandAncestors(File f) {
+        File p = f.getParentFile();
+        while (p != null && !p.equals(projectRoot)) {
+            expandedDirs.add(p.getAbsolutePath());
+            p = p.getParentFile();
+        }
+    }
+
+    // ===== Live preview =====
+
+    private void setupLivePreview() {
+        int holderId = getResources().getIdentifier("livePreviewContainer", "id", getPackageName());
+        ViewGroup holder = holderId != 0 ? (ViewGroup) findViewById(holderId) : null;
+        if (holder == null) return;
+
+        preview = new LivePreviewPanel(this);
+        ScrollView sv = new ScrollView(this);
+        sv.addView(preview);
+        holder.removeAllViews();
+        holder.addView(sv, new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        preview.setListener(line -> goToLine(line));
+    }
+
+    private void setupEditorWatcher() {
+        codeEditorText.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
+            @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
+            @Override public void afterTextChanged(Editable e) {
+                if (preview != null && currentFile != null && isLayoutXml(currentFile)) {
+                    preview.setXml(e.toString());
+                }
+            }
+        });
+    }
+
+    private boolean isLayoutXml(File f) {
+        String n = f.getName();
+        return !projectType.equals("Game")
+                && n.endsWith(".xml")
+                && !n.equals("AndroidManifest.xml")
+                && !n.equals("GameManifest.xml");
+    }
+
+    private void updatePreviewFor(File f, String content) {
+        if (preview == null) return;
+        if (projectType.equals("Game")) {
+            preview.showMessage("Game preview Aalam Game Engine ke saath aayega");
+        } else if (isLayoutXml(f)) {
+            preview.setXml(content);
+        } else {
+            preview.showMessage("Live preview sirf layout XML files ke liye hai");
+        }
+    }
+
+    private void goToLine(int line) {
+        String text = codeEditorText.getText().toString();
+        int off = 0;
+        int cur = 1;
+        while (cur < line && off < text.length()) {
+            int nl = text.indexOf('\n', off);
+            if (nl < 0) { off = text.length(); break; }
+            off = nl + 1;
+            cur++;
+        }
+        codeEditorText.requestFocus();
+        codeEditorText.setSelection(Math.min(off, text.length()));
+    }
+
+    // ===== Long-press menu =====
+
+    private void setupContextMenu() {
+        menu = new FileContextMenu(this, new FileContextMenu.Host() {
+            @Override public void onOpenFile(File f) {
+                openFile(f);
+            }
+
+            @Override public void onRenamed(File oldFile, File newFile) {
+                String op = oldFile.getAbsolutePath();
+                String np = newFile.getAbsolutePath();
+                if (currentFile != null) {
+                    String cp = currentFile.getAbsolutePath();
+                    if (cp.equals(op) || cp.startsWith(op + "/")) {
+                        currentFile = new File(np + cp.substring(op.length()));
+                        openFileTabLabel.setText(relativePath(currentFile));
+                    }
+                }
+                Set<String> remapped = new HashSet<>();
+                for (String p : expandedDirs) {
+                    remapped.add(p.equals(op) || p.startsWith(op + "/")
+                            ? np + p.substring(op.length()) : p);
+                }
+                expandedDirs = remapped;
+            }
+
+            @Override public void onDeleted(File f) {
+                if (currentFile == null) return;
+                String dp = f.getAbsolutePath();
+                String cp = currentFile.getAbsolutePath();
+                if (cp.equals(dp) || cp.startsWith(dp + "/")) {
+                    currentFile = null;
+                    codeEditorText.setText("");
+                    openFileTabLabel.setText("No file open");
+                    if (preview != null) preview.showMessage("Koi file open nahi hai");
+                }
+            }
+
+            @Override public void onTreeChanged() {
+                refreshFileTree();
+            }
+        });
+        menu.setProject(projectRoot, projectPackage);
+    }
+
+    private void openMenu(File f) {
+        saveCurrentFile();
+        menu.show(f);
+    }
+
+    // ===== File tree (built from real folders) =====
+
+    private void refreshFileTree() {
+        LinearLayout container = findViewById(R.id.fileTreeContainer);
+        container.removeAllViews();
+        fileItemViews.clear();
+        selectedFileItem = null;
+
+        TextView rootRow = new TextView(this);
+        rootRow.setText("📁 " + projectName);
+        rootRow.setTextColor(0xFFD4AF37);
+        rootRow.setTextSize(11);
+        rootRow.setTypeface(null, Typeface.BOLD);
+        rootRow.setPadding(dp(2), dp(6), dp(2), dp(6));
+        rootRow.setOnClickListener(v -> openMenu(projectRoot));
+        rootRow.setOnLongClickListener(v -> {
+            openMenu(projectRoot);
+            return true;
+        });
+        container.addView(rootRow);
+
+        addDirContents(container, projectRoot, 1);
+        highlightCurrent();
+    }
+
+    private void addDirContents(LinearLayout parent, File dir, int depth) {
+        File[] kids = dir.listFiles();
+        if (kids == null) return;
+        Arrays.sort(kids, (a, b) -> {
+            if (a.isDirectory() != b.isDirectory()) return a.isDirectory() ? -1 : 1;
+            return a.getName().compareToIgnoreCase(b.getName());
+        });
+        for (File f : kids) {
+            if (f.isDirectory()) addDirRow(parent, f, depth);
+            else addFileRow(parent, f, depth);
+        }
+    }
+
+    private void addDirRow(LinearLayout parent, File dir, int depth) {
+        final boolean open = expandedDirs.contains(dir.getAbsolutePath());
+        TextView row = makeRow((open ? "▾ " : "▸ ") + "📁 " + dir.getName(), depth);
+        if (depth == 1) row.setTextColor(0xFFD4AF37);
+        row.setOnClickListener(v -> {
+            if (open) expandedDirs.remove(dir.getAbsolutePath());
+            else expandedDirs.add(dir.getAbsolutePath());
+            refreshFileTree();
+        });
+        row.setOnLongClickListener(v -> {
+            openMenu(dir);
+            return true;
+        });
+        parent.addView(row);
+        if (open) addDirContents(parent, dir, depth + 1);
+    }
+
+    private void addFileRow(LinearLayout parent, File file, int depth) {
+        TextView row = makeRow("📄 " + file.getName(), depth);
+        row.setOnClickListener(v -> openFile(file));
+        row.setOnLongClickListener(v -> {
+            openMenu(file);
+            return true;
+        });
+        fileItemViews.put(file.getAbsolutePath(), row);
+        parent.addView(row);
+    }
+
+    private TextView makeRow(String text, int depth) {
+        TextView item = new TextView(this);
+        item.setText(text);
+        item.setTextColor(0xFFCCCCCC);
+        item.setTextSize(10);
+        item.setPadding(dp(2 + depth * 10), dp(5), dp(2), dp(5));
+        return item;
+    }
+
+    private void highlightCurrent() {
+        if (selectedFileItem != null) {
+            selectedFileItem.setTextColor(0xFFCCCCCC);
+            selectedFileItem.setBackgroundColor(0x00000000);
+            selectedFileItem = null;
+        }
+        if (currentFile == null) return;
+        TextView v = fileItemViews.get(currentFile.getAbsolutePath());
+        if (v != null) {
+            v.setTextColor(0xFFD4AF37);
+            v.setBackgroundColor(0x22D4AF37);
+            selectedFileItem = v;
+        }
+    }
+
+    // ===== Open / save =====
+
+    private boolean isTextFile(File f) {
+        if (f.length() > 1024 * 1024) return false;
+        String n = f.getName();
+        int dot = n.lastIndexOf('.');
+        if (dot < 0) return true;
+        return TEXT_EXT.contains(n.substring(dot + 1).toLowerCase());
+    }
+
+    private void openFile(File f) {
+        if (f == null || !f.isFile()) return;
+        if (!isTextFile(f)) {
+            Toast.makeText(this, "Ye file type editor me nahi khulta", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        saveCurrentFile();
+
+        String content;
+        try {
+            content = readText(f);
+        } catch (IOException e) {
+            Toast.makeText(this, "File nahi khuli: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        currentFile = f;
+        codeEditorText.setText(content);
+        openFileTabLabel.setText(relativePath(f));
+        highlightCurrent();
+        updatePreviewFor(f, content);
+    }
+
+    private void saveCurrentFile() {
+        if (currentFile == null || codeEditorText == null || !currentFile.exists()) return;
+        try {
+            writeText(currentFile, codeEditorText.getText().toString());
+        } catch (IOException e) {
+            Toast.makeText(this, "Save fail: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private String relativePath(File f) {
+        String root = projectRoot.getAbsolutePath();
+        String p = f.getAbsolutePath();
+        if (p.startsWith(root + "/")) p = p.substring(root.length() + 1);
+        return p.replace("/", " / ");
+    }
+
     // ===== Error checking =====
 
     private void checkErrorsInCurrentFile() {
-        if (currentFileKey == null) return;
+        if (currentFile == null) return;
 
         LinearLayout buildLogPanel = findViewById(R.id.buildLogPanel);
         TextView buildLogText = findViewById(R.id.buildLogText);
@@ -164,7 +588,7 @@ public class ProjectEditorActivity extends AppCompatActivity {
         btnToggleBuildPanel.setText("⌃");
 
         String content = codeEditorText.getText().toString();
-        String fileName = currentFileKey.contains("::") ? currentFileKey.split("::", 2)[1] : currentFileKey;
+        String fileName = currentFile.getName();
 
         List<String> errors = runBasicChecks(fileName, content);
 
@@ -335,6 +759,22 @@ public class ProjectEditorActivity extends AppCompatActivity {
 
     // ===== .asc export =====
 
+    private void collectFiles(File dir, List<File> out) {
+        File[] kids = dir.listFiles();
+        if (kids == null) return;
+        Arrays.sort(kids);
+        for (File f : kids) {
+            if (f.isDirectory()) collectFiles(f, out);
+            else out.add(f);
+        }
+    }
+
+    private String zipPath(File f) {
+        String root = projectRoot.getAbsolutePath();
+        String p = f.getAbsolutePath();
+        return p.startsWith(root + "/") ? p.substring(root.length() + 1) : f.getName();
+    }
+
     private void exportAsc(TextView buildLogText) {
         try {
             JSONObject manifest = new JSONObject();
@@ -357,9 +797,12 @@ public class ProjectEditorActivity extends AppCompatActivity {
 
             manifest.put("createdBy", "Aalam Studio");
 
+            List<File> files = new ArrayList<>();
+            collectFiles(projectRoot, files);
+
             JSONArray filesArray = new JSONArray();
-            for (String key : fileContents.keySet()) {
-                filesArray.put(key.replace("::", "/"));
+            for (File f : files) {
+                filesArray.put(zipPath(f));
             }
             manifest.put("files", filesArray);
 
@@ -375,14 +818,13 @@ public class ProjectEditorActivity extends AppCompatActivity {
 
             ZipEntry manifestEntry = new ZipEntry("manifest.json");
             zos.putNextEntry(manifestEntry);
-            zos.write(manifest.toString(2).getBytes());
+            zos.write(manifest.toString(2).getBytes("UTF-8"));
             zos.closeEntry();
 
-            for (Map.Entry<String, String> entry : fileContents.entrySet()) {
-                String path = "src/" + entry.getKey().replace("::", "/");
-                ZipEntry fileEntry = new ZipEntry(path);
+            for (File f : files) {
+                ZipEntry fileEntry = new ZipEntry("src/" + zipPath(f));
                 zos.putNextEntry(fileEntry);
-                zos.write(entry.getValue().getBytes());
+                zos.write(readBytes(f));
                 zos.closeEntry();
             }
 
@@ -417,153 +859,11 @@ public class ProjectEditorActivity extends AppCompatActivity {
         }
     }
 
-    // ===== File tree building (per platform, collapsible) =====
-
-    private void buildFileTree() {
-        LinearLayout fileTreeContainer = findViewById(R.id.fileTreeContainer);
-        fileTreeContainer.removeAllViews();
-        fileContents.clear();
-        fileItemViews.clear();
-        defaultOpenKey = null;
-
-        List<String> platforms = splitList(projectPlatform);
-        if (platforms.isEmpty()) platforms.add("Android");
-
-        List<String> chosenLanguages = splitList(projectLanguage);
-
-        for (String platform : platforms) {
-            List<String> languagesForPlatform = intersectLanguages(platform, chosenLanguages);
-            if (languagesForPlatform.isEmpty()) {
-                languagesForPlatform = new ArrayList<>();
-                languagesForPlatform.add(defaultLanguageFor(platform));
-            }
-            addPlatformSection(fileTreeContainer, platform, languagesForPlatform);
-        }
-    }
-
-    private void addPlatformSection(LinearLayout parent, String platform, List<String> languages) {
-        TextView header = new TextView(this);
-        header.setText("▸ " + platform);
-        header.setTextColor(0xFFD4AF37);
-        header.setTextSize(11);
-        header.setTypeface(null, android.graphics.Typeface.BOLD);
-        header.setPadding(dp(2), dp(8), dp(2), dp(4));
-        parent.addView(header);
-
-        LinearLayout sectionContainer = new LinearLayout(this);
-        sectionContainer.setOrientation(LinearLayout.VERTICAL);
-        sectionContainer.setVisibility(View.GONE);
-        parent.addView(sectionContainer);
-
-        header.setOnClickListener(v -> {
-            boolean expanded = sectionContainer.getVisibility() == View.VISIBLE;
-            sectionContainer.setVisibility(expanded ? View.GONE : View.VISIBLE);
-            header.setText((expanded ? "▸ " : "▾ ") + platform);
-        });
-
-        populatePlatformFiles(sectionContainer, platform, languages);
-    }
-
-    private void populatePlatformFiles(LinearLayout container, String platform, List<String> languages) {
-        boolean isAndroid = platform.equals("Android");
-
-        if (projectType.equals("Game")) {
-            addFolderLabel(container, "  🎮 game");
-
-            String manifestKey = platform + "::GameManifest.xml";
-            fileContents.put(manifestKey, loadOrDefault(manifestKey,
-                    "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
-                    "<game-manifest>\n" +
-                    "    <name>" + projectName + "</name>\n" +
-                    "    <platform>" + platform + "</platform>\n" +
-                    "    <engine>Aalam Game Engine</engine>\n" +
-                    "</game-manifest>"));
-            addFileItem(container, manifestKey, "GameManifest.xml", "    📄 ");
-
-            addFolderLabel(container, "    📁 scripts");
-            for (String lang : languages) {
-                String fileName = "GameMain." + getExtension(lang);
-                String key = platform + "::" + fileName;
-                fileContents.put(key, loadOrDefault(key, buildGameMainContent(lang)));
-                addFileItem(container, key, fileName, "      📄 ");
-                if (defaultOpenKey == null) defaultOpenKey = key;
-            }
-
-            addFolderLabel(container, "    📁 config");
-            String configKey = platform + "::game_config.json";
-            fileContents.put(configKey, loadOrDefault(configKey,
-                    "{\n" +
-                    "  \"gameName\": \"" + projectName + "\",\n" +
-                    "  \"engine\": \"Aalam Game Engine\",\n" +
-                    "  \"platform\": \"" + platform + "\",\n" +
-                    "  \"language\": \"" + String.join(" + ", languages) + "\"\n" +
-                    "}"));
-            addFileItem(container, configKey, "game_config.json", "      📄 ");
-
-        } else {
-            addFolderLabel(container, "  📁 app");
-
-            if (isAndroid) {
-                addFolderLabel(container, "    📁 manifests");
-                String manifestKey = platform + "::AndroidManifest.xml";
-                fileContents.put(manifestKey, loadOrDefault(manifestKey,
-                        "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
-                        "<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\">\n\n" +
-                        "    <application android:label=\"@string/app_name\">\n" +
-                        "        <activity android:name=\".MainActivity\" android:exported=\"true\">\n" +
-                        "            <intent-filter>\n" +
-                        "                <action android:name=\"android.intent.action.MAIN\" />\n" +
-                        "                <category android:name=\"android.intent.category.LAUNCHER\" />\n" +
-                        "            </intent-filter>\n" +
-                        "        </activity>\n" +
-                        "    </application>\n" +
-                        "</manifest>"));
-                addFileItem(container, manifestKey, "AndroidManifest.xml", "      📄 ");
-            } else {
-                addFolderLabel(container, "    📁 config");
-                String configKey = platform + "::app_config.json";
-                fileContents.put(configKey, loadOrDefault(configKey,
-                        "{\n" +
-                        "  \"appName\": \"" + projectName + "\",\n" +
-                        "  \"platform\": \"" + platform + "\",\n" +
-                        "  \"language\": \"" + String.join(" + ", languages) + "\"\n" +
-                        "}"));
-                addFileItem(container, configKey, "app_config.json", "      📄 ");
-            }
-
-            addFolderLabel(container, "    📁 src");
-            for (String lang : languages) {
-                String fileName = (isAndroid ? "MainActivity." : "Main.") + getExtension(lang);
-                String key = platform + "::" + fileName;
-                fileContents.put(key, loadOrDefault(key, buildAppMainContent(lang, isAndroid)));
-                addFileItem(container, key, fileName, "      📄 ");
-                if (defaultOpenKey == null) defaultOpenKey = key;
-            }
-
-            if (isAndroid) {
-                addFolderLabel(container, "    📁 res/layout");
-                String layoutKey = platform + "::activity_main.xml";
-                fileContents.put(layoutKey, loadOrDefault(layoutKey,
-                        "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
-                        "<LinearLayout xmlns:android=\"http://schemas.android.com/apk/res/android\"\n" +
-                        "    android:layout_width=\"match_parent\"\n" +
-                        "    android:layout_height=\"match_parent\"\n" +
-                        "    android:gravity=\"center\">\n\n" +
-                        "    <TextView\n" +
-                        "        android:layout_width=\"wrap_content\"\n" +
-                        "        android:layout_height=\"wrap_content\"\n" +
-                        "        android:text=\"Hello World!\" />\n\n" +
-                        "</LinearLayout>"));
-                addFileItem(container, layoutKey, "activity_main.xml", "      📄 ");
-            }
-        }
-    }
-
     // ===== Content generators =====
 
     private String buildAppMainContent(String lang, boolean isAndroid) {
         if (isAndroid && lang.equals("Kotlin")) {
-            return "package com.example.app\n\n" +
+            return "package " + projectPackage + "\n\n" +
                     "import android.os.Bundle\n" +
                     "import androidx.appcompat.app.AppCompatActivity\n\n" +
                     "class MainActivity : AppCompatActivity() {\n" +
@@ -574,7 +874,7 @@ public class ProjectEditorActivity extends AppCompatActivity {
                     "}";
         }
         if (isAndroid) {
-            return "package com.example.app;\n\n" +
+            return "package " + projectPackage + ";\n\n" +
                     "import android.os.Bundle;\n" +
                     "import androidx.appcompat.app.AppCompatActivity;\n\n" +
                     "public class MainActivity extends AppCompatActivity {\n" +
@@ -742,69 +1042,29 @@ public class ProjectEditorActivity extends AppCompatActivity {
         }
     }
 
-    // ===== Save / load per-file code =====
+    // ===== IO helpers =====
 
-    private String loadOrDefault(String key, String defaultContent) {
-        String saved = codePrefs.getString(key, null);
-        return saved != null ? saved : defaultContent;
-    }
-
-    private void saveCurrentFile() {
-        if (currentFileKey == null || codeEditorText == null) return;
-        String content = codeEditorText.getText().toString();
-        fileContents.put(currentFileKey, content);
-        codePrefs.edit().putString(currentFileKey, content).apply();
-    }
-
-    // ===== File tree item helpers =====
-
-    private void addFolderLabel(LinearLayout container, String text) {
-        TextView item = new TextView(this);
-        item.setText(text);
-        item.setTextColor(0xFFCCCCCC);
-        item.setTextSize(10);
-        item.setPadding(dp(2), dp(4), dp(2), dp(4));
-        container.addView(item);
-    }
-
-    private void addFileItem(LinearLayout container, String key, String fileName, String prefix) {
-        TextView item = new TextView(this);
-        item.setText(prefix + fileName);
-        item.setTextColor(0xFFCCCCCC);
-        item.setTextSize(10);
-        item.setPadding(dp(2), dp(4), dp(2), dp(4));
-        item.setOnClickListener(v -> openFile(key));
-
-        fileItemViews.put(key, item);
-        container.addView(item);
-    }
-
-    private void openFile(String key) {
-        String content = fileContents.get(key);
-        if (content == null) return;
-
-        saveCurrentFile();
-
-        currentFileKey = key;
-        codeEditorText.setText(content);
-
-        String[] parts = key.split("::", 2);
-        String platform = parts[0];
-        String fileName = parts.length > 1 ? parts[1] : key;
-        openFileTabLabel.setText(platform + " / " + fileName);
-
-        if (selectedFileItem != null) {
-            selectedFileItem.setTextColor(0xFFCCCCCC);
-            selectedFileItem.setBackgroundColor(0x00000000);
-        }
-
-        TextView newSelected = fileItemViews.get(key);
-        if (newSelected != null) {
-            newSelected.setTextColor(0xFFD4AF37);
-            newSelected.setBackgroundColor(0x22D4AF37);
-            selectedFileItem = newSelected;
+    private byte[] readBytes(File f) throws IOException {
+        try (InputStream is = new FileInputStream(f)) {
+            ByteArrayOutputStream bo = new ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = is.read(buf)) > 0) bo.write(buf, 0, n);
+            return bo.toByteArray();
         }
     }
+
+    private String readText(File f) throws IOException {
+        return new String(readBytes(f), "UTF-8");
+    }
+
+    private void writeText(File f, String s) throws IOException {
+        try (OutputStream os = new FileOutputStream(f)) {
+            os.write(s.getBytes("UTF-8"));
+        }
+    }
+
+    // ===== Tabs =====
 
     private void setupTabs() {
         TextView tabDesign = findViewById(R.id.tabDesign);
