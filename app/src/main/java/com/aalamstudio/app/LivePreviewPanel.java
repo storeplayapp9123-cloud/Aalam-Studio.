@@ -76,18 +76,16 @@ public class LivePreviewPanel extends LinearLayout {
         bg.setStroke(px(3), GOLD);
         phone.setBackground(bg);
         phone.setClipToOutline(true);
-        LinearLayout.LayoutParams pl = new LinearLayout.LayoutParams(px(220), px(390));
+        LinearLayout.LayoutParams pl = new LinearLayout.LayoutParams(px(160), px(280));
         pl.gravity = Gravity.CENTER_HORIZONTAL;
         pl.topMargin = px(8);
         pl.bottomMargin = px(12);
         addView(phone, pl);
 
         addView(label("Component Tree"));
-        ScrollView sv = new ScrollView(c);
         treeBox = new LinearLayout(c);
         treeBox.setOrientation(VERTICAL);
-        sv.addView(treeBox);
-        addView(sv, new LinearLayout.LayoutParams(MATCH, 0, 1f));
+        addView(treeBox, new LinearLayout.LayoutParams(MATCH, WRAP));
     }
 
     // ---------- public API ----------
