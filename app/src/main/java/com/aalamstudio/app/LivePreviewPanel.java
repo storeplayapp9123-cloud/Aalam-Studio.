@@ -46,6 +46,7 @@ public class LivePreviewPanel extends LinearLayout {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final float density;
     private final FrameLayout phone;
+    private final TextView appTitle;
     private final TextView errorBar;
     private final LinearLayout treeBox;
     private Listener listener;
@@ -69,18 +70,100 @@ public class LivePreviewPanel extends LinearLayout {
         errorBar.setVisibility(GONE);
         addView(errorBar);
 
+        // ---- phone frame (bezel + status bar + app bar + content + home bar) ----
+        final int innerW = px(140);
+        final int vw = px(360), vh = px(740);          // virtual phone screen (360x740 dp)
+        final float scale = (float) innerW / vw;
+        final int innerH = Math.round(vh * scale);
+
+        FrameLayout bezel = new FrameLayout(c);
+        GradientDrawable bz = new GradientDrawable();
+        bz.setColor(0xFF0B0B0B);
+        bz.setCornerRadius(px(24));
+        bz.setStroke(px(2), 0xFF3A3A3A);
+        bezel.setBackground(bz);
+        bezel.setPadding(px(6), px(6), px(6), px(6));
+
+        FrameLayout screenClip = new FrameLayout(c);
+        GradientDrawable sbg = new GradientDrawable();
+        sbg.setColor(Color.WHITE);
+        sbg.setCornerRadius(px(18));
+        screenClip.setBackground(sbg);
+        screenClip.setClipToOutline(true);
+        bezel.addView(screenClip, new FrameLayout.LayoutParams(innerW, innerH));
+
+        LinearLayout virt = new LinearLayout(c);
+        virt.setOrientation(VERTICAL);
+        virt.setPivotX(0);
+        virt.setPivotY(0);
+        virt.setScaleX(scale);
+        virt.setScaleY(scale);
+        screenClip.addView(virt, new FrameLayout.LayoutParams(vw, vh));
+
+        // status bar
+        LinearLayout status = new LinearLayout(c);
+        status.setOrientation(HORIZONTAL);
+        status.setGravity(Gravity.CENTER_VERTICAL);
+        status.setBackgroundColor(0xFF4527A0);
+        status.setPadding(px(14), 0, px(14), 0);
+        TextView clock = new TextView(c);
+        clock.setText("11:00");
+        clock.setTextColor(Color.WHITE);
+        clock.setTextSize(12);
+        status.addView(clock, new LinearLayout.LayoutParams(0, WRAP, 1f));
+        TextView icons = new TextView(c);
+        icons.setText("\u25BE \u25E2 \u25AE");
+        icons.setTextColor(Color.WHITE);
+        icons.setTextSize(11);
+        status.addView(icons);
+        virt.addView(status, new LinearLayout.LayoutParams(MATCH, px(26)));
+
+        // app bar
+        appTitle = new TextView(c);
+        appTitle.setText("My Application");
+        appTitle.setTextColor(Color.WHITE);
+        appTitle.setTextSize(20);
+        appTitle.setGravity(Gravity.CENTER_VERTICAL);
+        appTitle.setBackgroundColor(0xFF5E35B1);
+        appTitle.setPadding(px(16), 0, px(16), 0);
+        virt.addView(appTitle, new LinearLayout.LayoutParams(MATCH, px(56)));
+
+        // content area: the rendered layout goes here
         phone = new FrameLayout(c);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(Color.WHITE);
-        bg.setCornerRadius(px(14));
-        bg.setStroke(px(3), GOLD);
-        phone.setBackground(bg);
-        phone.setClipToOutline(true);
-        LinearLayout.LayoutParams pl = new LinearLayout.LayoutParams(px(160), px(280));
+        phone.setBackgroundColor(Color.WHITE);
+        phone.setClipChildren(true);
+        virt.addView(phone, new LinearLayout.LayoutParams(MATCH, 0, 1f));
+
+        // home indicator bar
+        FrameLayout nav = new FrameLayout(c);
+        nav.setBackgroundColor(Color.WHITE);
+        View homeBar = new View(c);
+        GradientDrawable hb = new GradientDrawable();
+        hb.setColor(0xFF222222);
+        hb.setCornerRadius(px(3));
+        homeBar.setBackground(hb);
+        FrameLayout.LayoutParams hp = new FrameLayout.LayoutParams(px(110), px(4));
+        hp.gravity = Gravity.CENTER;
+        nav.addView(homeBar, hp);
+        virt.addView(nav, new LinearLayout.LayoutParams(MATCH, px(22)));
+
+        // camera punch-hole (not scaled)
+        View cam = new View(c);
+        GradientDrawable cg = new GradientDrawable();
+        cg.setShape(GradientDrawable.OVAL);
+        cg.setColor(0xFF000000);
+        cg.setStroke(px(1), 0xFF444444);
+        cam.setBackground(cg);
+        FrameLayout.LayoutParams cp = new FrameLayout.LayoutParams(px(7), px(7));
+        cp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+        cp.topMargin = px(3);
+        screenClip.addView(cam, cp);
+
+        LinearLayout.LayoutParams pl = new LinearLayout.LayoutParams(WRAP, WRAP);
         pl.gravity = Gravity.CENTER_HORIZONTAL;
         pl.topMargin = px(8);
         pl.bottomMargin = px(12);
-        addView(phone, pl);
+        addView(bezel, pl);
 
         addView(label("Component Tree"));
         treeBox = new LinearLayout(c);
@@ -91,6 +174,9 @@ public class LivePreviewPanel extends LinearLayout {
     // ---------- public API ----------
 
     public void setListener(Listener l) { listener = l; }
+
+    /** Text shown in the purple app bar of the phone frame. */
+    public void setAppTitle(String title) { appTitle.setText(title); }
 
     /** Debounced: safe to call on every keystroke. */
     public void setXml(String xml) {
@@ -107,6 +193,7 @@ public class LivePreviewPanel extends LinearLayout {
         TextView t = new TextView(getContext());
         t.setText(msg);
         t.setTextColor(0xFF666666);
+        t.setTextSize(18);
         t.setGravity(Gravity.CENTER);
         t.setPadding(px(12), px(12), px(12), px(12));
         phone.addView(t, new FrameLayout.LayoutParams(MATCH, MATCH));
