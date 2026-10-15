@@ -47,7 +47,7 @@ public class ProjectEditorActivity extends AppCompatActivity {
     private static final Set<String> TEXT_EXT = new HashSet<>(Arrays.asList(
             "java", "kt", "xml", "json", "txt", "md", "c", "cpp", "cc", "h", "hpp", "cs",
             "swift", "m", "lua", "js", "py", "go", "dart", "hlsl", "glsl", "gradle",
-            "properties", "html", "css", "yml", "yaml", "sh", "csv"));
+            "properties", "pro", "html", "css", "yml", "yaml", "sh", "csv"));
 
     private String projectName = "My Project";
     private String projectType = "App";
@@ -62,6 +62,7 @@ public class ProjectEditorActivity extends AppCompatActivity {
     private File projectRoot;
     private File currentFile = null;
     private Set<String> expandedDirs = new HashSet<>();
+    private java.util.Map<String, Boolean> vState = new java.util.HashMap<>(); // Android-view folder open/closed
     private java.util.Map<String, TextView> fileItemViews = new java.util.HashMap<>();
     private TextView selectedFileItem;
 
@@ -194,6 +195,49 @@ public class ProjectEditorActivity extends AppCompatActivity {
         if (!projectRoot.exists()) {
             projectRoot.mkdirs();
             seedProject(); // first time: create default files (old saved code is migrated)
+        } else {
+            migrateAndroidLayout(); // old flat projects -> app/src/main/... structure
+            ensureAndroidDirs();
+        }
+    }
+
+    /** res/drawable and res/values (with strings.xml) like a normal Android project. */
+    private void ensureAndroidDirs() {
+        File res = new File(projectRoot, "Android/app/src/main/res");
+        if (!res.isDirectory()) return;
+        new File(res, "drawable").mkdirs();
+        File values = new File(res, "values");
+        if (!values.exists()) {
+            values.mkdirs();
+            String safe = projectName.replace("&", "&amp;").replace("<", "&lt;");
+            try {
+                writeText(new File(values, "strings.xml"),
+                        "<resources>\n    <string name=\"app_name\">" + safe + "</string>\n</resources>\n");
+            } catch (IOException ignored) { }
+        }
+    }
+
+    private String pkgPath() {
+        return projectPackage.replace('.', '/');
+    }
+
+    /** Moves old flat Android files into the Android Studio style folders. */
+    private void migrateAndroidLayout() {
+        File a = new File(projectRoot, "Android");
+        if (!a.isDirectory() || new File(a, "app").exists()) return;
+        File main = new File(a, "app/src/main");
+        File[] kids = a.listFiles();
+        if (kids == null) return;
+        for (File f : kids) {
+            if (!f.isFile()) continue;
+            String n = f.getName();
+            File destDir;
+            if (n.equals("AndroidManifest.xml")) destDir = main;
+            else if (n.endsWith(".java") || n.endsWith(".kt")) destDir = new File(main, "java/" + pkgPath());
+            else if (n.endsWith(".xml")) destDir = new File(main, "res/layout");
+            else continue;
+            destDir.mkdirs();
+            f.renameTo(new File(destDir, n));
         }
     }
 
@@ -213,12 +257,12 @@ public class ProjectEditorActivity extends AppCompatActivity {
         }
     }
 
-    private void seed(String platform, String fileName, String content) {
+    private void seed(String platform, String relDir, String fileName, String content) {
         String text = codePrefs.getString(platform + "::" + fileName, content);
-        File f = new File(new File(projectRoot, platform), fileName);
+        File dir = relDir.isEmpty() ? new File(projectRoot, platform) : new File(new File(projectRoot, platform), relDir);
+        File f = new File(dir, fileName);
         try {
-            File parent = f.getParentFile();
-            if (parent != null) parent.mkdirs();
+            dir.mkdirs();
             writeText(f, text);
         } catch (IOException e) {
             Toast.makeText(this, "File nahi bani: " + fileName, Toast.LENGTH_SHORT).show();
@@ -229,7 +273,7 @@ public class ProjectEditorActivity extends AppCompatActivity {
         boolean isAndroid = platform.equals("Android");
 
         if (projectType.equals("Game")) {
-            seed(platform, "GameManifest.xml",
+            seed(platform, "", "GameManifest.xml",
                     "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
                     "<game-manifest>\n" +
                     "    <name>" + projectName + "</name>\n" +
@@ -238,56 +282,58 @@ public class ProjectEditorActivity extends AppCompatActivity {
                     "</game-manifest>");
 
             for (String lang : languages) {
-                seed(platform, "GameMain." + getExtension(lang), buildGameMainContent(lang));
+                seed(platform, "", "GameMain." + getExtension(lang), buildGameMainContent(lang));
             }
 
-            seed(platform, "game_config.json",
+            seed(platform, "", "game_config.json",
                     "{\n" +
                     "  \"gameName\": \"" + projectName + "\",\n" +
                     "  \"engine\": \"Aalam Game Engine\",\n" +
                     "  \"platform\": \"" + platform + "\",\n" +
                     "  \"language\": \"" + String.join(" + ", languages) + "\"\n" +
                     "}");
-        } else {
-            if (isAndroid) {
-                seed(platform, "AndroidManifest.xml",
-                        "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
-                        "<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\">\n\n" +
-                        "    <application android:label=\"@string/app_name\">\n" +
-                        "        <activity android:name=\".MainActivity\" android:exported=\"true\">\n" +
-                        "            <intent-filter>\n" +
-                        "                <action android:name=\"android.intent.action.MAIN\" />\n" +
-                        "                <category android:name=\"android.intent.category.LAUNCHER\" />\n" +
-                        "            </intent-filter>\n" +
-                        "        </activity>\n" +
-                        "    </application>\n" +
-                        "</manifest>");
-            } else {
-                seed(platform, "app_config.json",
-                        "{\n" +
-                        "  \"appName\": \"" + projectName + "\",\n" +
-                        "  \"platform\": \"" + platform + "\",\n" +
-                        "  \"language\": \"" + String.join(" + ", languages) + "\"\n" +
-                        "}");
-            }
+        } else if (isAndroid) {
+            String main = "app/src/main";
+            seed(platform, main, "AndroidManifest.xml",
+                    "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
+                    "<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\">\n\n" +
+                    "    <application android:label=\"@string/app_name\">\n" +
+                    "        <activity android:name=\".MainActivity\" android:exported=\"true\">\n" +
+                    "            <intent-filter>\n" +
+                    "                <action android:name=\"android.intent.action.MAIN\" />\n" +
+                    "                <category android:name=\"android.intent.category.LAUNCHER\" />\n" +
+                    "            </intent-filter>\n" +
+                    "        </activity>\n" +
+                    "    </application>\n" +
+                    "</manifest>");
 
             for (String lang : languages) {
-                String fileName = (isAndroid ? "MainActivity." : "Main.") + getExtension(lang);
-                seed(platform, fileName, buildAppMainContent(lang, isAndroid));
+                seed(platform, main + "/java/" + pkgPath(), "MainActivity." + getExtension(lang),
+                        buildAppMainContent(lang, true));
             }
 
-            if (isAndroid) {
-                seed(platform, "activity_main.xml",
-                        "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
-                        "<LinearLayout xmlns:android=\"http://schemas.android.com/apk/res/android\"\n" +
-                        "    android:layout_width=\"match_parent\"\n" +
-                        "    android:layout_height=\"match_parent\"\n" +
-                        "    android:gravity=\"center\">\n\n" +
-                        "    <TextView\n" +
-                        "        android:layout_width=\"wrap_content\"\n" +
-                        "        android:layout_height=\"wrap_content\"\n" +
-                        "        android:text=\"Hello World!\" />\n\n" +
-                        "</LinearLayout>");
+            seed(platform, main + "/res/layout", "activity_main.xml",
+                    "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
+                    "<LinearLayout xmlns:android=\"http://schemas.android.com/apk/res/android\"\n" +
+                    "    android:layout_width=\"match_parent\"\n" +
+                    "    android:layout_height=\"match_parent\"\n" +
+                    "    android:gravity=\"center\">\n\n" +
+                    "    <TextView\n" +
+                    "        android:layout_width=\"wrap_content\"\n" +
+                    "        android:layout_height=\"wrap_content\"\n" +
+                    "        android:text=\"Hello World!\" />\n\n" +
+                    "</LinearLayout>");
+            ensureAndroidDirs();
+        } else {
+            seed(platform, "", "app_config.json",
+                    "{\n" +
+                    "  \"appName\": \"" + projectName + "\",\n" +
+                    "  \"platform\": \"" + platform + "\",\n" +
+                    "  \"language\": \"" + String.join(" + ", languages) + "\"\n" +
+                    "}");
+
+            for (String lang : languages) {
+                seed(platform, "", "Main." + getExtension(lang), buildAppMainContent(lang, false));
             }
         }
     }
@@ -326,17 +372,56 @@ public class ProjectEditorActivity extends AppCompatActivity {
 
     // ===== Live preview =====
 
+    private TextView findTextView(View v, String text) {
+        if (v instanceof TextView && text.equals(String.valueOf(((TextView) v).getText()).trim())) {
+            return (TextView) v;
+        }
+        if (v instanceof ViewGroup) {
+            ViewGroup g = (ViewGroup) v;
+            for (int i = 0; i < g.getChildCount(); i++) {
+                TextView r = findTextView(g.getChildAt(i), text);
+                if (r != null) return r;
+            }
+        }
+        return null;
+    }
+
     private void setupLivePreview() {
+        ViewGroup holder = null;
+
+        // 1) explicit container in the layout XML (if you added one)
         int holderId = getResources().getIdentifier("livePreviewContainer", "id", getPackageName());
-        ViewGroup holder = holderId != 0 ? (ViewGroup) findViewById(holderId) : null;
-        if (holder == null) return;
+        if (holderId != 0) holder = (ViewGroup) findViewById(holderId);
+
+        // 2) otherwise take over the existing "Live Preview" column
+        if (holder == null) {
+            TextView title = findTextView(getWindow().getDecorView(), "Live Preview");
+            if (title != null && title.getParent() instanceof ViewGroup) {
+                ViewGroup p = (ViewGroup) title.getParent();
+                boolean safe = p.findViewById(R.id.codeEditorText) == null
+                        && p.findViewById(R.id.fileTreePanel) == null
+                        && p.findViewById(R.id.buildLogPanel) == null;
+                if (safe) holder = p;
+            }
+        }
+
+        if (holder == null) {
+            Toast.makeText(this, "Live Preview ki jagah nahi mili", Toast.LENGTH_LONG).show();
+            return;
+        }
 
         preview = new LivePreviewPanel(this);
-        ScrollView sv = new ScrollView(this);
-        sv.addView(preview);
         holder.removeAllViews();
-        holder.addView(sv, new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        if (holder.getParent() instanceof ScrollView) {
+            holder.addView(preview, new ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        } else {
+            ScrollView sv = new ScrollView(this);
+            sv.addView(preview);
+            holder.addView(sv, new ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        }
+        preview.setAppTitle(projectName);
         preview.setListener(line -> goToLine(line));
     }
 
@@ -364,11 +449,40 @@ public class ProjectEditorActivity extends AppCompatActivity {
         if (preview == null) return;
         if (projectType.equals("Game")) {
             preview.showMessage("Game preview Aalam Game Engine ke saath aayega");
-        } else if (isLayoutXml(f)) {
-            preview.setXml(content);
-        } else {
-            preview.showMessage("Live preview sirf layout XML files ke liye hai");
+            return;
         }
+        if (isLayoutXml(f)) {
+            preview.setXml(content);
+            return;
+        }
+        // Java/Kotlin Activity: show the layout it loads with setContentView(R.layout.xxx)
+        String n = f.getName();
+        if (n.endsWith(".java") || n.endsWith(".kt")) {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("R\\.layout\\.([A-Za-z0-9_]+)").matcher(content);
+            if (m.find()) {
+                File layout = findFileByName(projectRoot, m.group(1) + ".xml");
+                if (layout != null) {
+                    try {
+                        preview.setXml(readText(layout));
+                        return;
+                    } catch (IOException ignored) { }
+                }
+            }
+        }
+        preview.showMessage("Is file ka preview nahi hai. Layout XML kholo.");
+    }
+
+    private File findFileByName(File dir, String name) {
+        File[] kids = dir.listFiles();
+        if (kids == null) return null;
+        for (File f : kids) {
+            if (f.isFile() && f.getName().equals(name)) return f;
+            if (f.isDirectory()) {
+                File r = findFileByName(f, name);
+                if (r != null) return r;
+            }
+        }
+        return null;
     }
 
     private void goToLine(int line) {
@@ -456,7 +570,7 @@ public class ProjectEditorActivity extends AppCompatActivity {
         });
         container.addView(rootRow);
 
-        addDirContents(container, projectRoot, 1);
+        addProjectContents(container);
         highlightCurrent();
     }
 
@@ -473,9 +587,22 @@ public class ProjectEditorActivity extends AppCompatActivity {
         }
     }
 
-    private void addDirRow(LinearLayout parent, File dir, int depth) {
+    private void addDirRow(LinearLayout parent, File start, int depth) {
+        // compact single-child folder chains: app/src/main, java/hg/uff ...
+        File shown = start;
+        String label = start.getName();
+        while (true) {
+            File[] k = shown.listFiles();
+            if (k != null && k.length == 1 && k[0].isDirectory()) {
+                shown = k[0];
+                label += "/" + shown.getName();
+            } else {
+                break;
+            }
+        }
+        final File dir = shown;
         final boolean open = expandedDirs.contains(dir.getAbsolutePath());
-        TextView row = makeRow((open ? "▾ " : "▸ ") + "📁 " + dir.getName(), depth);
+        TextView row = makeRow((open ? "▾ " : "▸ ") + "📁 " + label, depth);
         if (depth == 1) row.setTextColor(0xFFD4AF37);
         row.setOnClickListener(v -> {
             if (open) expandedDirs.remove(dir.getAbsolutePath());
@@ -491,7 +618,26 @@ public class ProjectEditorActivity extends AppCompatActivity {
     }
 
     private void addFileRow(LinearLayout parent, File file, int depth) {
-        TextView row = makeRow("📄 " + file.getName(), depth);
+        addFileRow(parent, file, depth, false);
+    }
+
+    private void addFileRow(LinearLayout parent, File file, int depth, boolean stripExt) {
+        String n = file.getName();
+        String text;
+        if (n.equals("AndroidManifest.xml")) {
+            text = "📋 " + n;
+        } else if (n.endsWith(".java") || n.endsWith(".kt")) {
+            text = "🔵 " + (stripExt ? n.substring(0, n.lastIndexOf('.')) : n);
+        } else if (n.endsWith(".xml") && file.getAbsolutePath().contains("/res/")) {
+            text = "🔶 " + n;
+        } else {
+            text = "📄 " + n;
+        }
+        addFileRowText(parent, file, depth, text);
+    }
+
+    private void addFileRowText(LinearLayout parent, File file, int depth, String text) {
+        TextView row = makeRow(text, depth);
         row.setOnClickListener(v -> openFile(file));
         row.setOnLongClickListener(v -> {
             openMenu(file);
@@ -501,12 +647,176 @@ public class ProjectEditorActivity extends AppCompatActivity {
         parent.addView(row);
     }
 
+    // ===== Android Studio style "Android" view =====
+
+    private boolean vOpen(String key, boolean defaultOpen) {
+        Boolean b = vState.get(key);
+        return b != null ? b : defaultOpen;
+    }
+
+    /** Folder row for the virtual Android view. Returns true if it is open. */
+    private boolean addVFolder(LinearLayout parent, String label, String key, int depth,
+                               File target, boolean defaultOpen) {
+        final boolean open = vOpen(key, defaultOpen);
+        final String k = key;
+        TextView row = makeRow((open ? "▾ " : "▸ ") + label, depth);
+        row.setOnClickListener(v -> {
+            vState.put(k, !open);
+            refreshFileTree();
+        });
+        if (target != null && target.isDirectory()) {
+            row.setOnLongClickListener(v -> {
+                openMenu(target);
+                return true;
+            });
+        }
+        parent.addView(row);
+        return open;
+    }
+
+    private boolean isAndroidModule(File platformDir) {
+        return new File(platformDir, "app/src/main").isDirectory();
+    }
+
+    private void addProjectContents(LinearLayout parent) {
+        File[] kids = projectRoot.listFiles();
+        if (kids == null) return;
+        Arrays.sort(kids, (a, b) -> {
+            if (a.isDirectory() != b.isDirectory()) return a.isDirectory() ? -1 : 1;
+            return a.getName().compareToIgnoreCase(b.getName());
+        });
+        int dirCount = 0;
+        for (File f : kids) if (f.isDirectory()) dirCount++;
+
+        for (File f : kids) {
+            if (f.isFile()) {
+                addFileRow(parent, f, 1);
+            } else if (isAndroidModule(f)) {
+                if (dirCount > 1) {
+                    if (addVFolder(parent, "📁 " + f.getName(), "v:plat:" + f.getAbsolutePath(), 1, f, true)) {
+                        addAndroidView(parent, f, 2);
+                    }
+                } else {
+                    addAndroidView(parent, f, 1);
+                }
+            } else {
+                addDirRow(parent, f, 1);
+            }
+        }
+    }
+
+    private void addAndroidView(LinearLayout parent, File pdir, int d) {
+        String id = pdir.getAbsolutePath();
+        File app = new File(pdir, "app");
+        File main = new File(app, "src/main");
+
+        if (addVFolder(parent, "📁 app", "v:app:" + id, d, app, true)) {
+            int d2 = d + 1;
+
+            // manifests
+            if (addVFolder(parent, "📁 manifests", "v:man:" + id, d2, main, true)) {
+                File manifest = new File(main, "AndroidManifest.xml");
+                if (manifest.exists()) addFileRow(parent, manifest, d2 + 1);
+            }
+
+            // java (+ test source sets)
+            File javaRoot = new File(main, "java");
+            if (addVFolder(parent, "📁 java", "v:java:" + id, d2, javaRoot, true)) {
+                addPackages(parent, javaRoot, d2 + 1, "", true);
+                addPackages(parent, new File(app, "src/androidTest/java"), d2 + 1, " (androidTest)", false);
+                addPackages(parent, new File(app, "src/test/java"), d2 + 1, " (test)", false);
+            }
+
+            // res
+            File res = new File(main, "res");
+            if (addVFolder(parent, "📁 res", "v:res:" + id, d2, res, true)) {
+                File[] rk = res.listFiles();
+                if (rk != null) {
+                    Arrays.sort(rk, (a, b) -> {
+                        if (a.isDirectory() != b.isDirectory()) return a.isDirectory() ? -1 : 1;
+                        return a.getName().compareToIgnoreCase(b.getName());
+                    });
+                    for (File r : rk) {
+                        if (r.isDirectory()) {
+                            boolean open = addVFolder(parent, "📁 " + r.getName(),
+                                    "v:resd:" + r.getAbsolutePath(), d2 + 1, r, r.getName().equals("layout"));
+                            if (open) addDirContents(parent, r, d2 + 2);
+                        } else {
+                            addFileRow(parent, r, d2 + 1);
+                        }
+                    }
+                }
+            }
+        }
+
+        addGradleScripts(parent, pdir, d);
+    }
+
+    private void collectPackages(File root, File dir, List<File> out) {
+        File[] kids = dir.listFiles();
+        if (kids == null) return;
+        Arrays.sort(kids);
+        boolean hasFiles = false, hasDirs = false;
+        for (File k : kids) {
+            if (k.isDirectory()) hasDirs = true; else hasFiles = true;
+        }
+        if (!dir.equals(root) && (hasFiles || !hasDirs)) out.add(dir);
+        for (File k : kids) {
+            if (k.isDirectory()) collectPackages(root, k, out);
+        }
+    }
+
+    private void addPackages(LinearLayout parent, File root, int depth, String suffix, boolean defaultOpen) {
+        if (!root.isDirectory()) return;
+
+        File[] direct = root.listFiles();
+        if (direct != null) {
+            Arrays.sort(direct);
+            for (File f : direct) if (f.isFile()) addFileRow(parent, f, depth, true);
+        }
+
+        List<File> packages = new ArrayList<>();
+        collectPackages(root, root, packages);
+        for (File p : packages) {
+            String name = p.getAbsolutePath().substring(root.getAbsolutePath().length() + 1).replace('/', '.');
+            if (addVFolder(parent, "📦 " + name + suffix, "v:pkg:" + p.getAbsolutePath(), depth, p, defaultOpen)) {
+                File[] fs = p.listFiles();
+                if (fs == null) continue;
+                Arrays.sort(fs);
+                for (File f : fs) if (f.isFile()) addFileRow(parent, f, depth + 1, true);
+            }
+        }
+    }
+
+    private void addGradleScripts(LinearLayout parent, File pdir, int d) {
+        String[][] items = {
+                {"build.gradle", "Project: " + projectName},
+                {"app/build.gradle", "Module: app"},
+                {"gradle/wrapper/gradle-wrapper.properties", ""},
+                {"app/proguard-rules.pro", "ProGuard Rules for \"app\""},
+                {"gradle.properties", "Project Properties"},
+                {"settings.gradle", "Project Settings"},
+                {"local.properties", "SDK Location"}};
+        List<String[]> found = new ArrayList<>();
+        for (String[] it : items) {
+            if (new File(pdir, it[0]).isFile()) found.add(it);
+        }
+        if (found.isEmpty()) return;
+        if (addVFolder(parent, "🐘 Gradle Scripts", "v:gradle:" + pdir.getAbsolutePath(), d, null, true)) {
+            for (String[] it : found) {
+                File f = new File(pdir, it[0]);
+                String label = "⚙ " + f.getName() + (it[1].isEmpty() ? "" : " (" + it[1] + ")");
+                addFileRowText(parent, f, d + 1, label);
+            }
+        }
+    }
+
     private TextView makeRow(String text, int depth) {
         TextView item = new TextView(this);
         item.setText(text);
         item.setTextColor(0xFFCCCCCC);
         item.setTextSize(10);
-        item.setPadding(dp(2 + depth * 10), dp(5), dp(2), dp(5));
+        item.setPadding(dp(2 + depth * 8), dp(5), dp(2), dp(5));
         return item;
     }
 
