@@ -228,8 +228,8 @@ public class FileContextMenu {
                 + "        super.onCreate(savedInstanceState);\n"
                 + "        setContentView(R.layout." + layout + ");\n    }\n}\n";
         createFile(new File(dir, name + ".java"), code);
-        createLayout(layout);
-        boolean ok = registerInManifest("activity", fullName(dir, name));
+        createLayout(dir, layout);
+        boolean ok = registerInManifest(dir, "activity", fullName(dir, name));
         if (!ok) toast("AndroidManifest me <activity> khud add karo");
     }
 
@@ -244,7 +244,7 @@ public class FileContextMenu {
                 + "    @Override\n    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle state) {\n"
                 + "        return inflater.inflate(R.layout." + layout + ", container, false);\n    }\n}\n";
         createFile(new File(dir, name + ".java"), code);
-        createLayout(layout);
+        createLayout(dir, layout);
     }
 
     private void newService(File dir, String name) throws IOException {
@@ -253,13 +253,21 @@ public class FileContextMenu {
                 + "public class " + name + " extends Service {\n"
                 + "    @Override\n    public IBinder onBind(Intent intent) {\n        return null;\n    }\n}\n";
         createFile(new File(dir, name + ".java"), code);
-        boolean ok = registerInManifest("service", fullName(dir, name));
+        boolean ok = registerInManifest(dir, "service", fullName(dir, name));
         if (!ok) toast("AndroidManifest me <service> khud add karo");
     }
 
-    private void createLayout(String layoutName) throws IOException {
+    /** First-level folder of the project that contains t (the platform folder). */
+    private File platformRoot(File t) {
+        if (projectRoot == null) return t;
+        File cur = t;
+        while (cur != null && !projectRoot.equals(cur.getParentFile())) cur = cur.getParentFile();
+        return cur != null ? cur : projectRoot;
+    }
+
+    private void createLayout(File dir, String layoutName) throws IOException {
         if (projectRoot == null) return;
-        File f = new File(projectRoot, "res/layout/" + layoutName + ".xml");
+        File f = new File(platformRoot(dir), "res/layout/" + layoutName + ".xml");
         if (f.exists()) return;
         createFile(f, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
                 + "<LinearLayout xmlns:android=\"http://schemas.android.com/apk/res/android\"\n"
@@ -268,11 +276,12 @@ public class FileContextMenu {
                 + "    android:orientation=\"vertical\">\n\n</LinearLayout>\n");
     }
 
-    private boolean registerInManifest(String tag, String fullName) {
+    private boolean registerInManifest(File dir, String tag, String fullName) {
         if (projectRoot == null) return false;
+        File root = platformRoot(dir);
         File[] candidates = {
-                new File(projectRoot, "AndroidManifest.xml"),
-                new File(projectRoot, "app/src/main/AndroidManifest.xml")};
+                new File(root, "AndroidManifest.xml"),
+                new File(root, "app/src/main/AndroidManifest.xml")};
         for (File m : candidates) {
             if (!m.exists()) continue;
             try {
@@ -447,7 +456,7 @@ public class FileContextMenu {
     private String packageOf(File dir) {
         String p = dir.getAbsolutePath().replace('\\', '/');
         int i = p.indexOf("/java/");
-        return i >= 0 ? p.substring(i + 6).replace('/', '.') : "";
+        return i >= 0 ? p.substring(i + 6).replace('/', '.') : appPackage;
     }
 
     private String pkgLine(File dir) {
