@@ -79,6 +79,10 @@ public class ProjectEditorActivity extends AppCompatActivity {
     private TextView tabCodeView, tabPreviewView;
     private TextView[] allTabs;
 
+    private ViewGroup previewHolder;       // the right column that holds the preview
+    private int holderWidth = ViewGroup.LayoutParams.WRAP_CONTENT;
+    private float holderWeight = 0f;
+
     private LivePreviewPanel preview; // null if layout has no livePreviewContainer
     private FileContextMenu menu;
 
@@ -108,6 +112,7 @@ public class ProjectEditorActivity extends AppCompatActivity {
         editorProjectName.setText(projectName);
 
         codeEditorText = findViewById(R.id.codeEditorText);
+        codeEditorText = CodeEditText.replace(codeEditorText); // line numbers + colored code
         openFileTabLabel = findViewById(R.id.openFileTabLabel);
 
         TextView btnCloseEditor = findViewById(R.id.btnCloseEditor);
@@ -437,6 +442,32 @@ public class ProjectEditorActivity extends AppCompatActivity {
         }
         preview.setAppTitle(projectName);
         preview.setListener(line -> goToLine(line));
+
+        // hide / show the preview column with the arrow (like the Project tree)
+        previewHolder = holder;
+        ViewGroup.LayoutParams hlp = holder.getLayoutParams();
+        if (hlp != null) {
+            holderWidth = hlp.width;
+            if (hlp instanceof LinearLayout.LayoutParams) holderWeight = ((LinearLayout.LayoutParams) hlp).weight;
+        }
+        preview.setOnCollapseToggle(() -> togglePreviewPanel());
+    }
+
+    private void togglePreviewPanel() {
+        if (preview == null || previewHolder == null) return;
+        boolean collapse = !preview.isCollapsed();
+        preview.setCollapsed(collapse);
+
+        ViewGroup.LayoutParams lp = previewHolder.getLayoutParams();
+        if (lp == null) return;
+        if (collapse) {
+            lp.width = dp(44);
+            if (lp instanceof LinearLayout.LayoutParams) ((LinearLayout.LayoutParams) lp).weight = 0f;
+        } else {
+            lp.width = holderWidth;
+            if (lp instanceof LinearLayout.LayoutParams) ((LinearLayout.LayoutParams) lp).weight = holderWeight;
+        }
+        previewHolder.setLayoutParams(lp);
     }
 
     private void setupEditorWatcher() {
@@ -530,6 +561,9 @@ public class ProjectEditorActivity extends AppCompatActivity {
                     if (cp.equals(op) || cp.startsWith(op + "/")) {
                         currentFile = new File(np + cp.substring(op.length()));
                         openFileTabLabel.setText(relativePath(currentFile));
+                        if (codeEditorText instanceof CodeEditText) {
+                            ((CodeEditText) codeEditorText).setFileName(currentFile.getName());
+                        }
                     }
                 }
                 Set<String> remapped = new HashSet<>();
@@ -879,6 +913,9 @@ public class ProjectEditorActivity extends AppCompatActivity {
         }
 
         currentFile = f;
+        if (codeEditorText instanceof CodeEditText) {
+            ((CodeEditText) codeEditorText).setFileName(f.getName());
+        }
         loadingFile = true;
         codeEditorText.setText(content);
         loadingFile = false;
