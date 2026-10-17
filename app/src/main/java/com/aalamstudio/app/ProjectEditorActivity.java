@@ -73,6 +73,11 @@ public class ProjectEditorActivity extends AppCompatActivity {
     private TextView toggleFileTreePanel;
     private boolean fileTreeExpanded = true;
 
+    private boolean runOk = false;        // true only after a successful Run (project check)
+    private boolean loadingFile = false;  // true while openFile() sets the editor text
+    private TextView tabCodeView, tabPreviewView;
+    private TextView[] allTabs;
+
     private LivePreviewPanel preview; // null if layout has no livePreviewContainer
     private FileContextMenu menu;
 
@@ -132,8 +137,7 @@ public class ProjectEditorActivity extends AppCompatActivity {
             btnToggleBuildPanel.setText(isVisible ? "⌄" : "⌃");
         });
 
-        btnRun.setOnClickListener(v ->
-                Toast.makeText(this, "Run - coming soon", Toast.LENGTH_SHORT).show());
+        btnRun.setOnClickListener(v -> runProjectCheck());
 
         btnBuildApk.setOnClickListener(v -> {
             saveCurrentFile();
@@ -430,6 +434,7 @@ public class ProjectEditorActivity extends AppCompatActivity {
             @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
             @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
             @Override public void afterTextChanged(Editable e) {
+                if (!loadingFile) runOk = false; // code changed -> run again
                 if (preview != null && currentFile != null && isLayoutXml(currentFile)) {
                     preview.setXml(e.toString());
                 }
@@ -538,6 +543,7 @@ public class ProjectEditorActivity extends AppCompatActivity {
             }
 
             @Override public void onTreeChanged() {
+                runOk = false; // files added / renamed / deleted -> run again
                 refreshFileTree();
             }
         });
@@ -863,10 +869,34 @@ public class ProjectEditorActivity extends AppCompatActivity {
         }
 
         currentFile = f;
+        loadingFile = true;
         codeEditorText.setText(content);
+        loadingFile = false;
         openFileTabLabel.setText(relativePath(f));
         highlightCurrent();
         updatePreviewFor(f, content);
+        if (preview != null) preview.setAutoLandscape(detectLandscape(content));
+    }
+
+    /** True if the project/activity is landscape (manifest screenOrientation or setRequestedOrientation). */
+    private boolean detectLandscape(String currentContent) {
+        if (projectType.equals("Game")) return false;
+        if (currentContent.contains("SCREEN_ORIENTATION_LANDSCAPE")
+                || currentContent.contains("SCREEN_ORIENTATION_SENSOR_LANDSCAPE")
+                || currentContent.contains("SCREEN_ORIENTATION_REVERSE_LANDSCAPE")
+                || currentContent.contains("SCREEN_ORIENTATION_USER_LANDSCAPE")) {
+            return true;
+        }
+        File m = findFileByName(projectRoot, "AndroidManifest.xml");
+        if (m != null) {
+            try {
+                String x = readText(m);
+                if (x.matches("(?s).*screenOrientation\\s*=\\s*\"(sensorLandscape|landscape|reverseLandscape|userLandscape)\".*")) {
+                    return true;
+                }
+            } catch (IOException ignored) { }
+        }
+        return false;
     }
 
     private void saveCurrentFile() {
@@ -887,6 +917,7 @@ public class ProjectEditorActivity extends AppCompatActivity {
 
     // ===== Error checking =====
 
+    /** "Check" button: checks only the open file. */
     private void checkErrorsInCurrentFile() {
         if (currentFile == null) return;
 
@@ -897,174 +928,86 @@ public class ProjectEditorActivity extends AppCompatActivity {
         buildLogPanel.setVisibility(View.VISIBLE);
         btnToggleBuildPanel.setText("⌃");
 
-        String content = codeEditorText.getText().toString();
         String fileName = currentFile.getName();
-
-        List<String> errors = runBasicChecks(fileName, content);
+        List<String> errors = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
+        ProjectChecker.checkText(fileName, codeEditorText.getText().toString(), errors, warnings);
 
         StringBuilder sb = new StringBuilder();
         sb.append("Checking ").append(fileName).append(" ...\n\n");
-
-        if (errors.isEmpty()) {
+        if (errors.isEmpty() && warnings.isEmpty()) {
             sb.append("✅ No issues found.");
         } else {
-            sb.append("⚠ ").append(errors.size()).append(" issue(s) found:\n\n");
-            for (String e : errors) {
-                sb.append("• ").append(e).append("\n");
-            }
+            appendIssues(sb, errors, warnings);
         }
-
         buildLogText.setText(sb.toString());
     }
 
-    private List<String> runBasicChecks(String fileName, String content) {
-        List<String> errors = new ArrayList<>();
-        String ext = fileName.contains(".") ? fileName.substring(fileName.lastIndexOf('.') + 1) : "";
-
-        checkBracketBalance(content, errors, '{', '}');
-        checkBracketBalance(content, errors, '(', ')');
-        checkBracketBalance(content, errors, '[', ']');
-        checkUnclosedQuotes(content, errors);
-
-        switch (ext) {
-            case "java":
-                checkJavaBasics(content, errors);
-                break;
-            case "xml":
-                checkXmlBasics(content, errors);
-                break;
-            case "json":
-                checkJsonBasics(content, errors);
-                break;
-            case "kt":
-                checkKotlinBasics(content, errors);
-                break;
+    private void appendIssues(StringBuilder sb, List<String> errors, List<String> warnings) {
+        if (!errors.isEmpty()) {
+            sb.append("❌ ").append(errors.size()).append(" error(s):\n");
+            for (String e : errors) sb.append("• ").append(e).append("\n");
+            sb.append("\n");
         }
-
-        return errors;
+        if (!warnings.isEmpty()) {
+            sb.append("⚠ ").append(warnings.size()).append(" warning(s):\n");
+            for (String w : warnings) sb.append("• ").append(w).append("\n");
+        }
     }
 
-    private void checkBracketBalance(String content, List<String> errors, char open, char close) {
-        int depth = 0;
-        int line = 1;
-        boolean inString = false;
-        char stringChar = 0;
+    // ===== Run button: check the WHOLE project, then unlock Preview =====
 
-        for (int i = 0; i < content.length(); i++) {
-            char c = content.charAt(i);
-            if (c == '\n') line++;
+    private void runProjectCheck() {
+        saveCurrentFile();
 
-            if (inString) {
-                if (c == stringChar && (i == 0 || content.charAt(i - 1) != '\\')) inString = false;
-                continue;
+        LinearLayout buildLogPanel = findViewById(R.id.buildLogPanel);
+        TextView buildLogText = findViewById(R.id.buildLogText);
+        TextView btnToggleBuildPanel = findViewById(R.id.btnToggleBuildPanel);
+        buildLogPanel.setVisibility(View.VISIBLE);
+        btnToggleBuildPanel.setText("⌃");
+
+        ProjectChecker.Result r = ProjectChecker.check(projectRoot, projectType);
+        runOk = r.errors.isEmpty();
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("▶ Run: ").append(projectName).append("\n");
+        sb.append(r.fileCount).append(" files check hui\n\n");
+
+        if (runOk) {
+            sb.append("✅ Run successful");
+            if (!r.warnings.isEmpty()) sb.append(" (").append(r.warnings.size()).append(" warning)");
+            sb.append("\n\n");
+            if (!r.warnings.isEmpty()) {
+                appendIssues(sb, r.errors, r.warnings);
+                sb.append("\n");
             }
-            if (c == '"' || c == '\'') {
-                inString = true;
-                stringChar = c;
-                continue;
-            }
-
-            if (c == open) depth++;
-            else if (c == close) {
-                depth--;
-                if (depth < 0) {
-                    errors.add("Unexpected '" + close + "' near line " + line + " (no matching '" + open + "')");
-                    depth = 0;
-                }
-            }
+            sb.append("👉 Ab Preview tab dabao aur app chalao.");
+            Toast.makeText(this, "Run successful ✅ - ab Preview me chalao", Toast.LENGTH_SHORT).show();
+        } else {
+            sb.append("❌ Run failed\n\n");
+            appendIssues(sb, r.errors, r.warnings);
+            sb.append("\nErrors theek karke dobara ▶ Run dabao.");
+            Toast.makeText(this, "Run failed - " + r.errors.size() + " error", Toast.LENGTH_SHORT).show();
         }
-
-        if (depth > 0) {
-            errors.add("Missing " + depth + " closing '" + close + "' — check your " + open + " blocks");
-        }
+        buildLogText.setText(sb.toString());
     }
 
-    private void checkUnclosedQuotes(String content, List<String> errors) {
-        boolean inDouble = false;
-        boolean inSingle = false;
-
-        for (int i = 0; i < content.length(); i++) {
-            char c = content.charAt(i);
-            boolean escaped = i > 0 && content.charAt(i - 1) == '\\';
-            if (c == '"' && !inSingle && !escaped) inDouble = !inDouble;
-            else if (c == '\'' && !inDouble && !escaped) inSingle = !inSingle;
-        }
-
-        if (inDouble) errors.add("Unclosed double-quote (\") somewhere in the file");
-        if (inSingle) errors.add("Unclosed single-quote (') somewhere in the file");
-    }
-
-    private void checkJavaBasics(String content, List<String> errors) {
-        String[] lines = content.split("\n");
-        for (int i = 0; i < lines.length; i++) {
-            String line = lines[i].trim();
-            if (line.isEmpty()) continue;
-            if (line.startsWith("//") || line.startsWith("*") || line.startsWith("/*")) continue;
-            if (line.startsWith("@") || line.startsWith("import ") || line.startsWith("package ")) continue;
-
-            boolean endsOk = line.endsWith(";") || line.endsWith("{") || line.endsWith("}")
-                    || line.endsWith(",") || line.endsWith("(") || line.endsWith(":");
-
-            boolean looksLikeStatement = (line.contains("=") || line.matches(".*\\b(return|break|continue)\\b.*"))
-                    && !line.contains("//");
-
-            if (looksLikeStatement && !endsOk) {
-                errors.add("Line " + (i + 1) + ": possibly missing ';' → \"" + truncate(line) + "\"");
-            }
-        }
-
-        if (!content.contains("class ") && !content.contains("interface ") && !content.contains("enum ")) {
-            errors.add("No class/interface/enum declaration found in this Java file");
-        }
-    }
-
-    private void checkKotlinBasics(String content, List<String> errors) {
-        if (!content.contains("class ") && !content.contains("fun ") && !content.contains("object ")) {
-            errors.add("No class/fun/object declaration found in this Kotlin file");
-        }
-    }
-
-    private void checkXmlBasics(String content, List<String> errors) {
-        if (!content.trim().startsWith("<?xml") && !content.trim().startsWith("<")) {
-            errors.add("File doesn't start with an XML declaration or tag");
-        }
-
-        int openTags = 0;
-        java.util.regex.Matcher m = java.util.regex.Pattern.compile("</?[a-zA-Z][^>]*?(/?)>").matcher(content);
-        while (m.find()) {
-            String tag = m.group();
-            boolean selfClosing = tag.endsWith("/>");
-            boolean closing = tag.startsWith("</");
-            if (!selfClosing) {
-                if (closing) openTags--;
-                else openTags++;
-            }
-        }
-        if (openTags != 0) {
-            errors.add("XML tags don't look balanced (possible missing closing tag)");
-        }
-    }
-
-    private void checkJsonBasics(String content, List<String> errors) {
-        String trimmed = content.trim();
-        if (trimmed.isEmpty()) {
-            errors.add("File is empty");
+    /** Preview tab: only works after a successful Run. */
+    private void openPreviewTab() {
+        if (!runOk) {
+            LinearLayout buildLogPanel = findViewById(R.id.buildLogPanel);
+            TextView buildLogText = findViewById(R.id.buildLogText);
+            TextView btnToggleBuildPanel = findViewById(R.id.btnToggleBuildPanel);
+            buildLogPanel.setVisibility(View.VISIBLE);
+            btnToggleBuildPanel.setText("⌃");
+            buildLogText.setText("⚠ Pehle ▶ Run dabao.\n\nRun me poore project ke code aur files check hote hain. "
+                    + "Build log me \"Run successful\" aane ke baad Preview me app chalega.\n"
+                    + "(Code ya files badalne ke baad dobara Run karna hoga.)");
+            Toast.makeText(this, "Pehle ▶ Run karo", Toast.LENGTH_SHORT).show();
+            selectTab(tabCodeView);
             return;
         }
-        if (!(trimmed.startsWith("{") && trimmed.endsWith("}")) &&
-            !(trimmed.startsWith("[") && trimmed.endsWith("]"))) {
-            errors.add("JSON should start/end with matching { } or [ ]");
-        }
-        try {
-            if (trimmed.startsWith("{")) new JSONObject(trimmed);
-            else if (trimmed.startsWith("[")) new JSONArray(trimmed);
-        } catch (Exception e) {
-            errors.add("Invalid JSON: " + e.getMessage());
-        }
-    }
-
-    private String truncate(String s) {
-        return s.length() > 50 ? s.substring(0, 50) + "..." : s;
+        startPreviewApp();
     }
 
     // ===== .asc export =====
@@ -1378,23 +1321,148 @@ public class ProjectEditorActivity extends AppCompatActivity {
 
     private void setupTabs() {
         TextView tabDesign = findViewById(R.id.tabDesign);
-        TextView tabCode = findViewById(R.id.tabCode);
+        tabCodeView = findViewById(R.id.tabCode);
         TextView tabSplit = findViewById(R.id.tabSplit);
-        TextView tabPreview = findViewById(R.id.tabPreview);
+        tabPreviewView = findViewById(R.id.tabPreview);
 
-        TextView[] tabs = {tabDesign, tabCode, tabSplit, tabPreview};
+        allTabs = new TextView[]{tabDesign, tabCodeView, tabSplit, tabPreviewView};
 
-        for (TextView tab : tabs) {
+        for (TextView tab : allTabs) {
             tab.setOnClickListener(v -> {
-                for (TextView t : tabs) {
-                    t.setBackgroundResource(R.drawable.bg_type_card);
-                    t.setTextColor(0xFFCCCCCC);
+                selectTab(tab);
+                if (tab == tabPreviewView) {
+                    openPreviewTab();
+                } else if (tab != tabCodeView) {
+                    Toast.makeText(this, tab.getText() + " view - coming soon", Toast.LENGTH_SHORT).show();
                 }
-                tab.setBackgroundColor(0xFFD4AF37);
-                tab.setTextColor(0xFF000000);
-                Toast.makeText(this, tab.getText() + " view - coming soon", Toast.LENGTH_SHORT).show();
             });
         }
+    }
+
+    private void selectTab(TextView tab) {
+        for (TextView t : allTabs) {
+            t.setBackgroundResource(R.drawable.bg_type_card);
+            t.setTextColor(0xFFCCCCCC);
+        }
+        tab.setBackgroundColor(0xFFD4AF37);
+        tab.setTextColor(0xFF000000);
+    }
+
+    // ===== Run / Preview tab: run the app UI inside Studio, no compile =====
+
+    private void startPreviewApp() {
+        saveCurrentFile();
+
+        if (projectType.equals("Game")) {
+            Toast.makeText(this, "Game run Aalam Game Engine ke saath aayega", Toast.LENGTH_SHORT).show();
+            selectTab(tabCodeView);
+            return;
+        }
+        if (preview == null) {
+            Toast.makeText(this, "Preview panel nahi mila", Toast.LENGTH_SHORT).show();
+            selectTab(tabCodeView);
+            return;
+        }
+
+        File layout = resolveLaunchLayout();
+        if (layout == null) {
+            Toast.makeText(this, "Koi layout XML nahi mili (res/layout me banao)", Toast.LENGTH_LONG).show();
+            selectTab(tabCodeView);
+            return;
+        }
+
+        String xml;
+        try {
+            xml = readText(layout);
+        } catch (IOException e) {
+            Toast.makeText(this, "Layout nahi padh payi: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            selectTab(tabCodeView);
+            return;
+        }
+
+        String label = resolveAppLabel();
+        TextView log = findViewById(R.id.buildLogText);
+        log.setText("▶ Running " + label + "\nLayout: " + layout.getName()
+                + "\n(UI chalta hai. Java logic abhi nahi chalta.)");
+
+        selectTab(tabPreviewView);
+        preview.showRunner(xml, label, preview.isLandscape(), () -> selectTab(tabCodeView));
+    }
+
+    /** Launcher activity (manifest) -> setContentView(R.layout.x) -> that layout file. */
+    private File resolveLaunchLayout() {
+        File manifest = findFileByName(projectRoot, "AndroidManifest.xml");
+        if (manifest != null) {
+            try {
+                String x = readText(manifest);
+                java.util.regex.Matcher m = java.util.regex.Pattern
+                        .compile("<activity\\b([^>]*)>(.*?)</activity>", java.util.regex.Pattern.DOTALL)
+                        .matcher(x);
+                while (m.find()) {
+                    if (!m.group(2).contains("android.intent.category.LAUNCHER")) continue;
+                    java.util.regex.Matcher nm = java.util.regex.Pattern
+                            .compile("android:name\\s*=\\s*\"([^\"]+)\"").matcher(m.group(1));
+                    if (!nm.find()) continue;
+                    String cls = nm.group(1);
+                    cls = cls.substring(cls.lastIndexOf('.') + 1);
+                    File src = findFileByName(projectRoot, cls + ".java");
+                    if (src == null) src = findFileByName(projectRoot, cls + ".kt");
+                    if (src == null) continue;
+                    java.util.regex.Matcher lm = java.util.regex.Pattern
+                            .compile("R\\.layout\\.([A-Za-z0-9_]+)").matcher(readText(src));
+                    if (lm.find()) {
+                        File lay = findFileByName(projectRoot, lm.group(1) + ".xml");
+                        if (lay != null) return lay;
+                    }
+                }
+            } catch (IOException ignored) { }
+        }
+        if (currentFile != null && isLayoutXml(currentFile)) return currentFile;
+        return findFirstLayout(projectRoot);
+    }
+
+    private File findFirstLayout(File dir) {
+        File[] kids = dir.listFiles();
+        if (kids == null) return null;
+        Arrays.sort(kids);
+        for (File f : kids) {
+            if (!f.isDirectory()) continue;
+            if (f.getName().equals("layout")) {
+                File[] xmls = f.listFiles();
+                if (xmls != null) {
+                    Arrays.sort(xmls);
+                    for (File x : xmls) if (x.isFile() && x.getName().endsWith(".xml")) return x;
+                }
+            } else {
+                File r = findFirstLayout(f);
+                if (r != null) return r;
+            }
+        }
+        return null;
+    }
+
+    /** android:label of <application> (resolves @string/xxx from strings.xml). */
+    private String resolveAppLabel() {
+        File manifest = findFileByName(projectRoot, "AndroidManifest.xml");
+        if (manifest == null) return projectName;
+        try {
+            String x = readText(manifest);
+            java.util.regex.Matcher m = java.util.regex.Pattern
+                    .compile("<application\\b[^>]*android:label\\s*=\\s*\"([^\"]+)\"").matcher(x);
+            if (m.find()) {
+                String l = m.group(1);
+                if (!l.startsWith("@string/")) return l;
+                File sf = findFileByName(projectRoot, "strings.xml");
+                if (sf != null) {
+                    java.util.regex.Matcher sm = java.util.regex.Pattern
+                            .compile("<string\\s+name\\s*=\\s*\"" + java.util.regex.Pattern.quote(l.substring(8))
+                                    + "\"[^>]*>(.*?)</string>", java.util.regex.Pattern.DOTALL)
+                            .matcher(readText(sf));
+                    if (sm.find()) return sm.group(1).trim();
+                }
+            }
+        } catch (IOException ignored) { }
+        return projectName;
     }
 
     private int dp(int value) {
