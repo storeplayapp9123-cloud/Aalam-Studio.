@@ -59,6 +59,12 @@ public class LivePreviewPanel extends LinearLayout {
     private final TextView orientBtn;
     private final LinearLayout frameHolder;
     private final LinearLayout treeBox;
+    private final LinearLayout head;
+    private final TextView titleLabel;
+    private final TextView treeLabel;
+    private final TextView collapseBtn;
+    private boolean collapsed = false;
+    private Runnable onToggle;
     private Frame frame;
     private Listener listener;
     private String pending = "";
@@ -79,11 +85,11 @@ public class LivePreviewPanel extends LinearLayout {
         setPadding(px(12), px(12), px(12), px(12));
 
         // header: title + rotate button
-        LinearLayout head = new LinearLayout(c);
+        head = new LinearLayout(c);
         head.setOrientation(HORIZONTAL);
         head.setGravity(Gravity.CENTER_VERTICAL);
-        TextView t = label("Live Preview");
-        head.addView(t, new LinearLayout.LayoutParams(0, WRAP, 1f));
+        titleLabel = label("Live Preview");
+        head.addView(titleLabel, new LinearLayout.LayoutParams(0, WRAP, 1f));
         orientBtn = new TextView(c);
         orientBtn.setTextColor(GOLD);
         orientBtn.setTextSize(13);
@@ -96,6 +102,21 @@ public class LivePreviewPanel extends LinearLayout {
             }
         });
         head.addView(orientBtn);
+
+        // hide / show the whole preview column (gives the code editor more space)
+        collapseBtn = new TextView(c);
+        collapseBtn.setText("\u25B8");
+        collapseBtn.setTextColor(GOLD);
+        collapseBtn.setTextSize(20);
+        collapseBtn.setTypeface(null, Typeface.BOLD);
+        collapseBtn.setGravity(Gravity.CENTER);
+        collapseBtn.setPadding(px(10), px(2), px(6), px(2));
+        collapseBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                if (onToggle != null) onToggle.run();
+            }
+        });
+        head.addView(collapseBtn);
         addView(head);
 
         errorBar = new TextView(c);
@@ -112,7 +133,8 @@ public class LivePreviewPanel extends LinearLayout {
         fl.bottomMargin = px(12);
         addView(frameHolder, fl);
 
-        addView(label("Component Tree"));
+        treeLabel = label("Component Tree");
+        addView(treeLabel);
         treeBox = new LinearLayout(c);
         treeBox.setOrientation(VERTICAL);
         addView(treeBox, new LinearLayout.LayoutParams(MATCH, WRAP));
@@ -318,6 +340,27 @@ public class LivePreviewPanel extends LinearLayout {
     // ---------- public API ----------
 
     public void setListener(Listener l) { listener = l; }
+
+    /** Called when the user taps the hide/show arrow of the panel. */
+    public void setOnCollapseToggle(Runnable r) { onToggle = r; }
+
+    public boolean isCollapsed() { return collapsed; }
+
+    /** Collapsed = only the small arrow button stays visible. */
+    public void setCollapsed(boolean c) {
+        collapsed = c;
+        int vis = c ? GONE : VISIBLE;
+        titleLabel.setVisibility(vis);
+        orientBtn.setVisibility(vis);
+        frameHolder.setVisibility(vis);
+        treeLabel.setVisibility(vis);
+        treeBox.setVisibility(vis);
+        if (c) errorBar.setVisibility(GONE);
+        collapseBtn.setText(c ? "\u25C2" : "\u25B8");
+        head.setGravity(c ? Gravity.CENTER : Gravity.CENTER_VERTICAL);
+        int pad = c ? px(2) : px(12);
+        setPadding(pad, px(12), pad, px(12));
+    }
 
     /** Text shown in the purple app bar of the phone frame. */
     public void setAppTitle(String t) {
