@@ -353,107 +353,46 @@ public class LivePreviewPanel extends LinearLayout {
     public boolean isLandscape() { return landscape; }
 
     /**
-     * Full screen, interactive "run" of a layout: buttons, typing, checkboxes work.
-     * (UI only - Java logic is not executed.)
+     * A phone (always portrait) running the layout, as large as possible inside availW x availH px.
+     * UI only: typing, checkboxes, buttons work. Java logic is not executed.
      */
-    public void showRunner(String xml, String appTitle, boolean land, Runnable onClose) {
-        new Runner(xml, appTitle, land, onClose).show();
+    public View buildRunnerView(String xml, String appTitle, boolean land, int availW, int availH) {
+        float ratio = 360f / 740f;                                   // width / height of the phone
+        int innerW = Math.round(Math.min(availW / 1.10f, availH / (1f / ratio + 0.10f)));
+        Frame f = makeFrame(innerW, land, null, appTitle);
+        try {
+            Node r = parse(xml);
+            if (r != null) f.content.addView(build(r, f.content));
+        } catch (Exception e) {
+            drawMessage(f.content, "Layout error: " + e.getMessage());
+        }
+        return f.bezel;
     }
 
-    private class Runner {
-        final android.app.Dialog d;
-        final FrameLayout stage;
-        final String xml;
-        final String appTitle;
-        boolean land;
+    /**
+     * Fallback when AppPreviewActivity is not in the manifest: full screen dialog,
+     * no toolbar. The phone's Back button closes it.
+     */
+    public void showRunner(String xml, String appTitle, boolean land, final Runnable onClose) {
+        Context c = getContext();
+        final android.app.Dialog d = new android.app.Dialog(c, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        d.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN);
 
-        Runner(String xml, String appTitle, boolean land, final Runnable onClose) {
-            this.xml = xml;
-            this.appTitle = appTitle;
-            this.land = land;
-            Context c = getContext();
+        FrameLayout root = new FrameLayout(c);
+        root.setBackgroundColor(0xFF0F0F0F);
+        android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+        View phone = buildRunnerView(xml, appTitle, land, dm.widthPixels, dm.heightPixels);
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(WRAP, WRAP);
+        lp.gravity = Gravity.CENTER;
+        root.addView(phone, lp);
 
-            d = new android.app.Dialog(c, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
-            d.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN);
-
-            FrameLayout root = new FrameLayout(c);
-            root.setBackgroundColor(0xFF0F0F0F);
-
-            stage = new FrameLayout(c);
-            FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(MATCH, MATCH);
-            sl.topMargin = px(44);
-            root.addView(stage, sl);
-
-            LinearLayout bar = new LinearLayout(c);
-            bar.setOrientation(HORIZONTAL);
-            bar.setGravity(Gravity.CENTER_VERTICAL);
-            bar.setBackgroundColor(0xFF1A1A1A);
-            bar.setPadding(px(12), 0, px(4), 0);
-
-            TextView ttl = new TextView(c);
-            ttl.setText("\u25B6 Running \u00B7 " + appTitle);
-            ttl.setTextColor(GOLD);
-            ttl.setTextSize(14);
-            ttl.setTypeface(null, Typeface.BOLD);
-            ttl.setGravity(Gravity.CENTER_VERTICAL);
-            bar.addView(ttl, new LinearLayout.LayoutParams(0, MATCH, 1f));
-
-            bar.addView(barButton("\u21BB Restart", new View.OnClickListener() {
-                @Override public void onClick(View v) { draw(); }
-            }));
-            bar.addView(barButton("\u27F3 Rotate", new View.OnClickListener() {
-                @Override public void onClick(View v) { Runner.this.land = !Runner.this.land; draw(); }
-            }));
-            bar.addView(barButton("\u2715 Close", new View.OnClickListener() {
-                @Override public void onClick(View v) { d.dismiss(); }
-            }));
-            root.addView(bar, new FrameLayout.LayoutParams(MATCH, px(44)));
-
-            d.setContentView(root);
-            d.setOnDismissListener(new DialogInterface.OnDismissListener() {
-                @Override public void onDismiss(DialogInterface x) {
-                    if (onClose != null) onClose.run();
-                }
-            });
-        }
-
-        TextView barButton(String text, View.OnClickListener l) {
-            TextView t = new TextView(getContext());
-            t.setText(text);
-            t.setTextColor(0xFFEEEEEE);
-            t.setTextSize(13);
-            t.setGravity(Gravity.CENTER);
-            t.setPadding(px(12), 0, px(12), 0);
-            t.setOnClickListener(l);
-            t.setLayoutParams(new LinearLayout.LayoutParams(WRAP, MATCH));
-            return t;
-        }
-
-        void show() {
-            d.show();
-            draw();
-        }
-
-        /** (Re)starts the app: a fresh phone with a fresh copy of the layout. */
-        void draw() {
-            stage.removeAllViews();
-            android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
-            float ratio = 360f / 740f;     // phone is always portrait (width / height)
-            int maxW = Math.round(dm.widthPixels * 0.96f) - px(16);
-            int maxH = dm.heightPixels - px(44) - px(40);
-            int innerW = Math.min(maxW, Math.round(maxH * ratio));
-
-            Frame f = makeFrame(innerW, land, null, appTitle);
-            try {
-                Node r = parse(xml);
-                if (r != null) f.content.addView(build(r, f.content));
-            } catch (Exception e) {
-                drawMessage(f.content, "Layout error: " + e.getMessage());
+        d.setContentView(root);
+        d.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override public void onDismiss(DialogInterface x) {
+                if (onClose != null) onClose.run();
             }
-            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(WRAP, WRAP);
-            lp.gravity = Gravity.CENTER;
-            stage.addView(f.bezel, lp);
-        }
+        });
+        d.show();
     }
 
     // ---------- render ----------
