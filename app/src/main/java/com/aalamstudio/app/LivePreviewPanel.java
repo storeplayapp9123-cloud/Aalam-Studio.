@@ -1,15 +1,18 @@
 package com.aalamstudio.app;
 
 import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.text.InputType;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.TypedValue;
 import android.util.Xml;
 import android.view.Gravity;
 import android.view.View;
+import android.view.WindowManager;
 import android.view.ViewGroup;
 import android.widget.*;
 
@@ -43,14 +46,27 @@ public class LivePreviewPanel extends LinearLayout {
         List<Node> kids = new ArrayList<>();
     }
 
+    /** One phone frame: bezel + the content area where the layout is drawn. */
+    private static class Frame {
+        FrameLayout bezel;
+        FrameLayout content;
+        TextView title;
+    }
+
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final float density;
-    private final FrameLayout phone;
-    private final TextView appTitle;
     private final TextView errorBar;
+    private final TextView orientBtn;
+    private final LinearLayout frameHolder;
     private final LinearLayout treeBox;
+    private Frame frame;
     private Listener listener;
     private String pending = "";
+    private String lastXml = null;   // last good layout (re-drawn on rotate / full screen)
+    private String lastMsg = null;
+    private String title = "My Application";
+    private boolean landscape = false;
+    private boolean userOverride = false;
 
     private final Runnable renderTask = new Runnable() {
         @Override public void run() { render(pending); }
@@ -62,7 +78,25 @@ public class LivePreviewPanel extends LinearLayout {
         setOrientation(VERTICAL);
         setPadding(px(12), px(12), px(12), px(12));
 
-        addView(label("Live Preview"));
+        // header: title + rotate button
+        LinearLayout head = new LinearLayout(c);
+        head.setOrientation(HORIZONTAL);
+        head.setGravity(Gravity.CENTER_VERTICAL);
+        TextView t = label("Live Preview");
+        head.addView(t, new LinearLayout.LayoutParams(0, WRAP, 1f));
+        orientBtn = new TextView(c);
+        orientBtn.setTextColor(GOLD);
+        orientBtn.setTextSize(13);
+        orientBtn.setTypeface(null, Typeface.BOLD);
+        orientBtn.setPadding(px(8), px(4), px(4), px(4));
+        orientBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                userOverride = true;
+                applyOrientation(!landscape);
+            }
+        });
+        head.addView(orientBtn);
+        addView(head);
 
         errorBar = new TextView(c);
         errorBar.setTextColor(0xFFFF6B6B);
@@ -70,24 +104,52 @@ public class LivePreviewPanel extends LinearLayout {
         errorBar.setVisibility(GONE);
         addView(errorBar);
 
-        // ---- phone frame (bezel + status bar + app bar + content + home bar) ----
-        final int innerW = px(140);
-        final int vw = px(360), vh = px(740);          // virtual phone screen (360x740 dp)
+        frameHolder = new LinearLayout(c);
+        frameHolder.setOrientation(VERTICAL);
+        frameHolder.setGravity(Gravity.CENTER_HORIZONTAL);
+        LinearLayout.LayoutParams fl = new LinearLayout.LayoutParams(MATCH, WRAP);
+        fl.topMargin = px(8);
+        fl.bottomMargin = px(12);
+        addView(frameHolder, fl);
+
+        addView(label("Component Tree"));
+        treeBox = new LinearLayout(c);
+        treeBox.setOrientation(VERTICAL);
+        addView(treeBox, new LinearLayout.LayoutParams(MATCH, WRAP));
+
+        applyOrientation(false);
+    }
+
+    // ---------- phone frame ----------
+
+    /**
+     * Builds a phone. The phone frame is ALWAYS portrait (360x740 dp).
+     * land == false: the app fills the screen upright.
+     * land == true : the app is laid out as a landscape app (692x360 dp) and rotated
+     *                inside the portrait screen, like a landscape-locked app on a phone held upright.
+     * Status bar and home bar are system UI and always stay portrait.
+     */
+    private Frame makeFrame(int innerW, boolean land, final Runnable onTap, String barTitle) {
+        Context c = getContext();
+        final int vw = px(360);
+        final int vh = px(740);
         final float scale = (float) innerW / vw;
         final int innerH = Math.round(vh * scale);
+        Frame f = new Frame();
 
         FrameLayout bezel = new FrameLayout(c);
         GradientDrawable bz = new GradientDrawable();
         bz.setColor(0xFF0B0B0B);
-        bz.setCornerRadius(px(24));
+        bz.setCornerRadius(Math.max(px(12), Math.round(innerW * 0.17f)));
         bz.setStroke(px(2), 0xFF3A3A3A);
         bezel.setBackground(bz);
-        bezel.setPadding(px(6), px(6), px(6), px(6));
+        int bp = Math.max(px(4), Math.round(innerW * 0.04f));
+        bezel.setPadding(bp, bp, bp, bp);
 
         FrameLayout screenClip = new FrameLayout(c);
         GradientDrawable sbg = new GradientDrawable();
         sbg.setColor(Color.WHITE);
-        sbg.setCornerRadius(px(18));
+        sbg.setCornerRadius(Math.max(px(8), Math.round(innerW * 0.12f)));
         screenClip.setBackground(sbg);
         screenClip.setClipToOutline(true);
         bezel.addView(screenClip, new FrameLayout.LayoutParams(innerW, innerH));
@@ -100,7 +162,7 @@ public class LivePreviewPanel extends LinearLayout {
         virt.setScaleY(scale);
         screenClip.addView(virt, new FrameLayout.LayoutParams(vw, vh));
 
-        // status bar
+        // status bar (system UI, always portrait)
         LinearLayout status = new LinearLayout(c);
         status.setOrientation(HORIZONTAL);
         status.setGravity(Gravity.CENTER_VERTICAL);
@@ -118,23 +180,41 @@ public class LivePreviewPanel extends LinearLayout {
         status.addView(icons);
         virt.addView(status, new LinearLayout.LayoutParams(MATCH, px(26)));
 
+        // app area: upright app, or the landscape app rotated 90 degrees inside it
+        FrameLayout appArea = new FrameLayout(c);
+        appArea.setBackgroundColor(Color.WHITE);
+        appArea.setClipChildren(true);
+        virt.addView(appArea, new LinearLayout.LayoutParams(MATCH, 0, 1f));
+
+        LinearLayout app = new LinearLayout(c);
+        app.setOrientation(VERTICAL);
+        FrameLayout.LayoutParams ap;
+        if (land) {
+            ap = new FrameLayout.LayoutParams(px(740 - 26 - 22), px(360)); // 692 x 360 dp landscape app
+            ap.gravity = Gravity.CENTER;
+            app.setRotation(90);
+        } else {
+            ap = new FrameLayout.LayoutParams(MATCH, MATCH);
+        }
+        appArea.addView(app, ap);
+
         // app bar
-        appTitle = new TextView(c);
-        appTitle.setText("My Application");
-        appTitle.setTextColor(Color.WHITE);
-        appTitle.setTextSize(20);
-        appTitle.setGravity(Gravity.CENTER_VERTICAL);
-        appTitle.setBackgroundColor(0xFF5E35B1);
-        appTitle.setPadding(px(16), 0, px(16), 0);
-        virt.addView(appTitle, new LinearLayout.LayoutParams(MATCH, px(56)));
+        TextView bar = new TextView(c);
+        bar.setText(barTitle);
+        bar.setTextColor(Color.WHITE);
+        bar.setTextSize(20);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        bar.setBackgroundColor(0xFF5E35B1);
+        bar.setPadding(px(16), 0, px(16), 0);
+        app.addView(bar, new LinearLayout.LayoutParams(MATCH, px(land ? 48 : 56)));
 
         // content area: the rendered layout goes here
-        phone = new FrameLayout(c);
-        phone.setBackgroundColor(Color.WHITE);
-        phone.setClipChildren(true);
-        virt.addView(phone, new LinearLayout.LayoutParams(MATCH, 0, 1f));
+        FrameLayout content = new FrameLayout(c);
+        content.setBackgroundColor(Color.WHITE);
+        content.setClipChildren(true);
+        app.addView(content, new LinearLayout.LayoutParams(MATCH, 0, 1f));
 
-        // home indicator bar
+        // home indicator (system UI, always portrait)
         FrameLayout nav = new FrameLayout(c);
         nav.setBackgroundColor(Color.WHITE);
         View homeBar = new View(c);
@@ -147,28 +227,92 @@ public class LivePreviewPanel extends LinearLayout {
         nav.addView(homeBar, hp);
         virt.addView(nav, new LinearLayout.LayoutParams(MATCH, px(22)));
 
-        // camera punch-hole (not scaled)
+        // camera punch-hole (always top centre)
         View cam = new View(c);
         GradientDrawable cg = new GradientDrawable();
         cg.setShape(GradientDrawable.OVAL);
         cg.setColor(0xFF000000);
         cg.setStroke(px(1), 0xFF444444);
         cam.setBackground(cg);
-        FrameLayout.LayoutParams cp = new FrameLayout.LayoutParams(px(7), px(7));
+        int cs = Math.max(px(4), Math.round(innerW * 0.05f));
+        FrameLayout.LayoutParams cp = new FrameLayout.LayoutParams(cs, cs);
         cp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
         cp.topMargin = px(3);
         screenClip.addView(cam, cp);
 
-        LinearLayout.LayoutParams pl = new LinearLayout.LayoutParams(WRAP, WRAP);
-        pl.gravity = Gravity.CENTER_HORIZONTAL;
-        pl.topMargin = px(8);
-        pl.bottomMargin = px(12);
-        addView(bezel, pl);
+        // transparent shield so a tap anywhere on the screen opens the big preview
+        if (onTap != null) {
+            View shield = new View(c);
+            shield.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { onTap.run(); }
+            });
+            screenClip.addView(shield, new FrameLayout.LayoutParams(MATCH, MATCH));
+        }
 
-        addView(label("Component Tree"));
-        treeBox = new LinearLayout(c);
-        treeBox.setOrientation(VERTICAL);
-        addView(treeBox, new LinearLayout.LayoutParams(MATCH, WRAP));
+        f.bezel = bezel;
+        f.content = content;
+        f.title = bar;
+        return f;
+    }
+
+    private void applyOrientation(boolean land) {
+        landscape = land;
+        orientBtn.setText(land ? "\u27F3 Landscape" : "\u27F3 Portrait");
+        frameHolder.removeAllViews();
+        frame = makeFrame(px(140), land, new Runnable() {
+            @Override public void run() { showFull(); }
+        }, title);
+        frameHolder.addView(frame.bezel);
+        if (lastXml != null) {
+            try {
+                Node root = parse(lastXml);
+                if (root != null) frame.content.addView(build(root, frame.content));
+            } catch (Exception ignored) { }
+        } else if (lastMsg != null) {
+            drawMessage(frame.content, lastMsg);
+        }
+    }
+
+    /** Big preview: same layout in a full screen dialog. Tap anywhere to close. */
+    private void showFull() {
+        android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+        float ratio = 360f / 740f;   // phone is always portrait (width / height)
+        int maxW = Math.round(dm.widthPixels * 0.94f) - px(16);
+        int maxH = Math.round(dm.heightPixels * 0.90f) - px(16);
+        int innerW = Math.min(maxW, Math.round(maxH * ratio));
+
+        final android.app.Dialog d = new android.app.Dialog(getContext(),
+                android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        FrameLayout root = new FrameLayout(getContext());
+        root.setBackgroundColor(0xF2000000);
+        Frame big = makeFrame(innerW, landscape, null, title);
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(WRAP, WRAP);
+        lp.gravity = Gravity.CENTER;
+        root.addView(big.bezel, lp);
+        root.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { d.dismiss(); }
+        });
+        d.setContentView(root);
+
+        try {
+            if (lastXml != null) {
+                Node r = parse(lastXml);
+                if (r != null) big.content.addView(build(r, big.content));
+            } else if (lastMsg != null) {
+                drawMessage(big.content, lastMsg);
+            }
+        } catch (Exception ignored) { }
+        d.show();
+    }
+
+    private void drawMessage(FrameLayout where, String msg) {
+        TextView t = new TextView(getContext());
+        t.setText(msg);
+        t.setTextColor(0xFF666666);
+        t.setTextSize(18);
+        t.setGravity(Gravity.CENTER);
+        t.setPadding(px(12), px(12), px(12), px(12));
+        where.addView(t, new FrameLayout.LayoutParams(MATCH, MATCH));
     }
 
     // ---------- public API ----------
@@ -176,7 +320,15 @@ public class LivePreviewPanel extends LinearLayout {
     public void setListener(Listener l) { listener = l; }
 
     /** Text shown in the purple app bar of the phone frame. */
-    public void setAppTitle(String title) { appTitle.setText(title); }
+    public void setAppTitle(String t) {
+        title = t == null ? "" : t;
+        frame.title.setText(title);
+    }
+
+    /** Auto orientation (e.g. manifest says landscape). Ignored once the user taps the rotate button. */
+    public void setAutoLandscape(boolean land) {
+        if (!userOverride && land != landscape) applyOrientation(land);
+    }
 
     /** Debounced: safe to call on every keystroke. */
     public void setXml(String xml) {
@@ -188,15 +340,120 @@ public class LivePreviewPanel extends LinearLayout {
     public void showMessage(String msg) {
         handler.removeCallbacks(renderTask);
         errorBar.setVisibility(GONE);
-        phone.removeAllViews();
+        frame.content.removeAllViews();
         treeBox.removeAllViews();
-        TextView t = new TextView(getContext());
-        t.setText(msg);
-        t.setTextColor(0xFF666666);
-        t.setTextSize(18);
-        t.setGravity(Gravity.CENTER);
-        t.setPadding(px(12), px(12), px(12), px(12));
-        phone.addView(t, new FrameLayout.LayoutParams(MATCH, MATCH));
+        lastXml = null;
+        lastMsg = msg;
+        drawMessage(frame.content, msg);
+    }
+
+
+    // ---------- runner (Preview tab / Run button) ----------
+
+    public boolean isLandscape() { return landscape; }
+
+    /**
+     * Full screen, interactive "run" of a layout: buttons, typing, checkboxes work.
+     * (UI only - Java logic is not executed.)
+     */
+    public void showRunner(String xml, String appTitle, boolean land, Runnable onClose) {
+        new Runner(xml, appTitle, land, onClose).show();
+    }
+
+    private class Runner {
+        final android.app.Dialog d;
+        final FrameLayout stage;
+        final String xml;
+        final String appTitle;
+        boolean land;
+
+        Runner(String xml, String appTitle, boolean land, final Runnable onClose) {
+            this.xml = xml;
+            this.appTitle = appTitle;
+            this.land = land;
+            Context c = getContext();
+
+            d = new android.app.Dialog(c, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+            d.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN);
+
+            FrameLayout root = new FrameLayout(c);
+            root.setBackgroundColor(0xFF0F0F0F);
+
+            stage = new FrameLayout(c);
+            FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(MATCH, MATCH);
+            sl.topMargin = px(44);
+            root.addView(stage, sl);
+
+            LinearLayout bar = new LinearLayout(c);
+            bar.setOrientation(HORIZONTAL);
+            bar.setGravity(Gravity.CENTER_VERTICAL);
+            bar.setBackgroundColor(0xFF1A1A1A);
+            bar.setPadding(px(12), 0, px(4), 0);
+
+            TextView ttl = new TextView(c);
+            ttl.setText("\u25B6 Running \u00B7 " + appTitle);
+            ttl.setTextColor(GOLD);
+            ttl.setTextSize(14);
+            ttl.setTypeface(null, Typeface.BOLD);
+            ttl.setGravity(Gravity.CENTER_VERTICAL);
+            bar.addView(ttl, new LinearLayout.LayoutParams(0, MATCH, 1f));
+
+            bar.addView(barButton("\u21BB Restart", new View.OnClickListener() {
+                @Override public void onClick(View v) { draw(); }
+            }));
+            bar.addView(barButton("\u27F3 Rotate", new View.OnClickListener() {
+                @Override public void onClick(View v) { Runner.this.land = !Runner.this.land; draw(); }
+            }));
+            bar.addView(barButton("\u2715 Close", new View.OnClickListener() {
+                @Override public void onClick(View v) { d.dismiss(); }
+            }));
+            root.addView(bar, new FrameLayout.LayoutParams(MATCH, px(44)));
+
+            d.setContentView(root);
+            d.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                @Override public void onDismiss(DialogInterface x) {
+                    if (onClose != null) onClose.run();
+                }
+            });
+        }
+
+        TextView barButton(String text, View.OnClickListener l) {
+            TextView t = new TextView(getContext());
+            t.setText(text);
+            t.setTextColor(0xFFEEEEEE);
+            t.setTextSize(13);
+            t.setGravity(Gravity.CENTER);
+            t.setPadding(px(12), 0, px(12), 0);
+            t.setOnClickListener(l);
+            t.setLayoutParams(new LinearLayout.LayoutParams(WRAP, MATCH));
+            return t;
+        }
+
+        void show() {
+            d.show();
+            draw();
+        }
+
+        /** (Re)starts the app: a fresh phone with a fresh copy of the layout. */
+        void draw() {
+            stage.removeAllViews();
+            android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+            float ratio = 360f / 740f;     // phone is always portrait (width / height)
+            int maxW = Math.round(dm.widthPixels * 0.96f) - px(16);
+            int maxH = dm.heightPixels - px(44) - px(40);
+            int innerW = Math.min(maxW, Math.round(maxH * ratio));
+
+            Frame f = makeFrame(innerW, land, null, appTitle);
+            try {
+                Node r = parse(xml);
+                if (r != null) f.content.addView(build(r, f.content));
+            } catch (Exception e) {
+                drawMessage(f.content, "Layout error: " + e.getMessage());
+            }
+            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(WRAP, WRAP);
+            lp.gravity = Gravity.CENTER;
+            stage.addView(f.bezel, lp);
+        }
     }
 
     // ---------- render ----------
@@ -208,7 +465,7 @@ public class LivePreviewPanel extends LinearLayout {
         try {
             root = parse(xml);
             if (root == null) throw new Exception("No root element");
-            built = build(root, phone);
+            built = build(root, frame.content);
         } catch (Exception e) {
             // keep the last good preview, just show the error
             errorBar.setText("\u26A0 " + e.getMessage());
@@ -216,8 +473,10 @@ public class LivePreviewPanel extends LinearLayout {
             return;
         }
         errorBar.setVisibility(GONE);
-        phone.removeAllViews();
-        phone.addView(built);
+        lastXml = xml;
+        lastMsg = null;
+        frame.content.removeAllViews();
+        frame.content.addView(built);
         treeBox.removeAllViews();
         addTree(root, 0);
     }
@@ -291,6 +550,22 @@ public class LivePreviewPanel extends LinearLayout {
         }
 
         if (v instanceof TextView) applyText((TextView) v, n);
+
+        String vis = a(n, "visibility");
+        if ("gone".equals(vis)) v.setVisibility(View.GONE);
+        else if ("invisible".equals(vis)) v.setVisibility(View.INVISIBLE);
+        if ("false".equals(a(n, "enabled"))) v.setEnabled(false);
+        if (v instanceof CompoundButton && "true".equals(a(n, "checked"))) {
+            ((CompoundButton) v).setChecked(true);
+        }
+        if (v instanceof EditText) {
+            String it = a(n, "inputType");
+            if (it != null && it.contains("textPassword")) {
+                ((EditText) v).setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+            } else if (it != null && it.contains("number")) {
+                ((EditText) v).setInputType(InputType.TYPE_CLASS_NUMBER);
+            }
+        }
 
         String bgc = a(n, "background");
         if (bgc != null && bgc.startsWith("#")) v.setBackgroundColor(color(bgc, Color.TRANSPARENT));
