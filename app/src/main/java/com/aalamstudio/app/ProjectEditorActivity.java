@@ -74,6 +74,7 @@ public class ProjectEditorActivity extends AppCompatActivity {
     private boolean fileTreeExpanded = true;
 
     private boolean runOk = false;        // true only after a successful Run (project check)
+    private boolean previewLaunched = false; // AppPreviewActivity is open
     private boolean loadingFile = false;  // true while openFile() sets the editor text
     private TextView tabCodeView, tabPreviewView;
     private TextView[] allTabs;
@@ -172,6 +173,15 @@ public class ProjectEditorActivity extends AppCompatActivity {
         refreshFileTree();
         if (first != null) {
             openFile(first);
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (previewLaunched) {              // came back from the preview (Back button)
+            previewLaunched = false;
+            if (tabCodeView != null) selectTab(tabCodeView);
         }
     }
 
@@ -1386,7 +1396,19 @@ public class ProjectEditorActivity extends AppCompatActivity {
                 + "\n(UI chalta hai. Java logic abhi nahi chalta.)");
 
         selectTab(tabPreviewView);
-        preview.showRunner(xml, label, preview.isLandscape(), () -> selectTab(tabCodeView));
+        previewLaunched = true;
+        try {
+            Intent i = new Intent(this, AppPreviewActivity.class);
+            i.putExtra(AppPreviewActivity.EXTRA_LAYOUT_PATH, layout.getAbsolutePath());
+            i.putExtra(AppPreviewActivity.EXTRA_TITLE, label);
+            i.putExtra(AppPreviewActivity.EXTRA_LANDSCAPE, preview.isLandscape());
+            startActivity(i);
+        } catch (android.content.ActivityNotFoundException e) {
+            previewLaunched = false;
+            Toast.makeText(this, "Full screen ke liye AndroidManifest me AppPreviewActivity add karo",
+                    Toast.LENGTH_LONG).show();
+            preview.showRunner(xml, label, preview.isLandscape(), () -> selectTab(tabCodeView));
+        }
     }
 
     /** Launcher activity (manifest) -> setContentView(R.layout.x) -> that layout file. */
