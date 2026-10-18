@@ -217,6 +217,7 @@ public class ProjectEditorActivity extends AppCompatActivity {
         } else {
             migrateAndroidLayout(); // old flat projects -> app/src/main/... structure
             ensureAndroidDirs();
+            ensureManifestPackage(); // old manifests without package= get it added
         }
     }
 
@@ -234,6 +235,21 @@ public class ProjectEditorActivity extends AppCompatActivity {
                         "<resources>\n    <string name=\"app_name\">" + safe + "</string>\n</resources>\n");
             } catch (IOException ignored) { }
         }
+    }
+
+    /** Old projects: if <manifest> has no package= attribute, add it (aapt2 needs it). */
+    private void ensureManifestPackage() {
+        if (!projectPackage.matches("[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+")) return;
+        File m = new File(projectRoot, "Android/app/src/main/AndroidManifest.xml");
+        if (!m.isFile()) return;
+        try {
+            String x = readText(m);
+            if (x.contains("package=")) return;
+            int p = x.indexOf("<manifest");
+            if (p < 0) return;
+            x = x.substring(0, p + 9) + " package=\"" + projectPackage + "\"" + x.substring(p + 9);
+            writeText(m, x);
+        } catch (IOException ignored) { }
     }
 
     private String pkgPath() {
@@ -315,7 +331,8 @@ public class ProjectEditorActivity extends AppCompatActivity {
             String main = "app/src/main";
             seed(platform, main, "AndroidManifest.xml",
                     "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
-                    "<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\">\n\n" +
+                    "<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\"\n" +
+                    "    package=\"" + projectPackage + "\">\n\n" +
                     "    <application android:label=\"@string/app_name\">\n" +
                     "        <activity android:name=\".MainActivity\" android:exported=\"true\">\n" +
                     "            <intent-filter>\n" +
