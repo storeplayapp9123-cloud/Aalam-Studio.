@@ -209,6 +209,11 @@ public class NewProjectActivity extends AppCompatActivity {
                 Toast.makeText(this, "Package name is required", Toast.LENGTH_SHORT).show();
                 return;
             }
+            if (!pkg.matches("[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+")) {
+                Toast.makeText(this, "Package name galat hai. Aise likho: com.example.app (space ya capital nahi)",
+                        Toast.LENGTH_LONG).show();
+                return;
+            }
 
             String platformText = selectedPlatform.equals("Custom") ? customPlatformsText() : selectedPlatform;
 
