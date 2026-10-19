@@ -333,7 +333,8 @@ public class ProjectEditorActivity extends AppCompatActivity {
                     "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
                     "<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\"\n" +
                     "    package=\"" + projectPackage + "\">\n\n" +
-                    "    <application android:label=\"@string/app_name\">\n" +
+                    "    <application android:label=\"@string/app_name\"\n" +
+                    "        android:theme=\"@style/Theme.AppCompat.Light.DarkActionBar\">\n" +
                     "        <activity android:name=\".MainActivity\" android:exported=\"true\">\n" +
                     "            <intent-filter>\n" +
                     "                <action android:name=\"android.intent.action.MAIN\" />\n" +
