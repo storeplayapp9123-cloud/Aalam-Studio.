@@ -36,6 +36,7 @@
             android:exported="false"
             android:screenOrientation="landscape"/>
 
+        <!-- Preview tab: full screen portrait phone frame, Back button closes it -->
         <activity
             android:name=".AppPreviewActivity"
             android:exported="false"
