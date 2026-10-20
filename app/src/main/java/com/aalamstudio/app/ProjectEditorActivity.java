@@ -323,8 +323,10 @@ public class ProjectEditorActivity extends AppCompatActivity {
             seed(platform, "", "game_config.json",
                     "{\n" +
                     "  \"gameName\": \"" + projectName + "\",\n" +
+                    "  \"package\": \"" + projectPackage + "\",\n" +
                     "  \"engine\": \"Aalam Game Engine\",\n" +
                     "  \"platform\": \"" + platform + "\",\n" +
+                    "  \"orientation\": \"portrait\",\n" +
                     "  \"language\": \"" + String.join(" + ", languages) + "\"\n" +
                     "}");
         } else if (isAndroid) {
@@ -1275,12 +1277,37 @@ public class ProjectEditorActivity extends AppCompatActivity {
             case "Dart":
                 return "void onGameStart() {\n  loadScene('MainScene');\n}";
             default:
-                return "package com.example.game;\n\n" +
+                return "package " + projectPackage + ";\n\n" +
+                        "import android.graphics.Canvas;\n" +
+                        "import android.graphics.Color;\n" +
+                        "import android.graphics.Paint;\n" +
                         "import com.aalam.engine.GameEngine;\n\n" +
                         "public class GameMain extends GameEngine {\n" +
+                        "    private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);\n" +
+                        "    private float x, y;\n" +
+                        "    private float vx = 280f, vy = 360f;\n" +
+                        "    private final float r = 40f;\n\n" +
                         "    @Override\n" +
                         "    public void onGameStart() {\n" +
                         "        loadScene(\"MainScene\");\n" +
+                        "        x = getWidth() / 2f;\n" +
+                        "        y = getHeight() / 2f;\n" +
+                        "        paint.setTextSize(48f);\n" +
+                        "    }\n\n" +
+                        "    @Override\n" +
+                        "    public void onUpdate(float dt) {\n" +
+                        "        x += vx * dt;\n" +
+                        "        y += vy * dt;\n" +
+                        "        if (x < r || x > getWidth() - r) vx = -vx;\n" +
+                        "        if (y < r || y > getHeight() - r) vy = -vy;\n" +
+                        "    }\n\n" +
+                        "    @Override\n" +
+                        "    public void onDraw(Canvas canvas) {\n" +
+                        "        canvas.drawColor(Color.rgb(20, 20, 30));\n" +
+                        "        paint.setColor(Color.rgb(212, 175, 55));\n" +
+                        "        canvas.drawCircle(x, y, r, paint);\n" +
+                        "        paint.setColor(Color.WHITE);\n" +
+                        "        canvas.drawText(\"Aalam Game\", 40f, 80f, paint);\n" +
                         "    }\n" +
                         "}";
         }
