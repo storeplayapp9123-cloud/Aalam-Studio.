@@ -76,6 +76,11 @@ public class NewProjectActivity extends AppCompatActivity {
         void onClick(LinearLayout card, String label);
     }
 
+    /** Abhi Compiler sirf Java build karta hai. */
+    private boolean isLangReady(String lang) {
+        return lang.equals("Java");
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -228,8 +233,21 @@ public class NewProjectActivity extends AppCompatActivity {
             }
 
             String finalLanguage = projectType.equals("Game") ? resolveGameLanguageText() : resolveAppLanguageText();
+
+            // Orientation ko alag se yaad rakho, taaki editor manifest / game_config me laga sake
+            String orientationValue = projectType.equals("Game")
+                    ? (selectedGameType.equals("3D") ? "landscape" : selectedGameOrientation.toLowerCase())
+                    : selectedOrientation.toLowerCase();
+            getSharedPreferences("aalam_project_meta", MODE_PRIVATE)
+                    .edit().putString(name + "::orientation", orientationValue).apply();
+
             Project project = new Project(name, pkg, projectType, detail, finalLanguage, platformText, System.currentTimeMillis());
             ProjectStore.addProject(this, project);
+
+            if (!selectedPlatform.equals("Android") || !isLangReady(finalLanguage)) {
+                Toast.makeText(this, "Abhi sirf Android + Java build hota hai. Project ban jayega, par build baad me.",
+                        Toast.LENGTH_LONG).show();
+            }
 
             Toast.makeText(this, projectType + " '" + name + "' created!", Toast.LENGTH_LONG).show();
 
@@ -545,7 +563,7 @@ public class NewProjectActivity extends AppCompatActivity {
         card.setBackgroundResource(R.drawable.bg_type_card);
 
         TextView text = new TextView(this);
-        text.setText(label);
+        text.setText(isLangReady(label) || label.equals("Custom") ? label : label + " (jald)");
         text.setTextColor(0xFFFFFFFF);
         text.setTextSize(10);
         card.addView(text);
