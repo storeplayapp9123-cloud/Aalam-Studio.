@@ -2,6 +2,10 @@ package com.aalamstudio.app;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
@@ -54,6 +58,7 @@ public class ProjectEditorActivity extends AppCompatActivity {
     private String projectLanguage = "Java";
     private String projectPlatform = "Android";
     private String projectPackage = "com.example.app";
+    private String projectOrientation = "portrait";
 
     private EditText codeEditorText;
     private TextView openFileTabLabel;
@@ -107,6 +112,8 @@ public class ProjectEditorActivity extends AppCompatActivity {
         if (pkg != null) projectPackage = pkg;
 
         codePrefs = getSharedPreferences("aalam_code_" + projectName, MODE_PRIVATE);
+        projectOrientation = getSharedPreferences("aalam_project_meta", MODE_PRIVATE)
+                .getString(projectName + "::orientation", "portrait");
 
         TextView editorProjectName = findViewById(R.id.editorProjectName);
         editorProjectName.setText(projectName);
@@ -215,24 +222,42 @@ public class ProjectEditorActivity extends AppCompatActivity {
             projectRoot.mkdirs();
             seedProject(); // first time: create default files (old saved code is migrated)
         } else {
-            migrateAndroidLayout(); // old flat projects -> app/src/main/... structure
-            ensureAndroidDirs();
+            migrateAndroidLayout();  // old flat projects -> app/src/main/... structure
+            ensureAndroidDirs();     // res/values (strings + styles), res/drawable
             ensureManifestPackage(); // old manifests without package= get it added
+            if (ensureLauncherIcons()) ensureManifestIcon(); // icons banne par manifest me icon line
+            ensureGradleFiles();     // build.gradle, settings.gradle ... (agar nahi hain)
         }
     }
 
-    /** res/drawable and res/values (with strings.xml) like a normal Android project. */
+    /** res/drawable and res/values (strings.xml + styles.xml) like a normal Android project. */
     private void ensureAndroidDirs() {
         File res = new File(projectRoot, "Android/app/src/main/res");
         if (!res.isDirectory()) return;
         new File(res, "drawable").mkdirs();
         File values = new File(res, "values");
-        if (!values.exists()) {
-            values.mkdirs();
+        values.mkdirs();
+
+        File strings = new File(values, "strings.xml");
+        if (!strings.exists()) {
             String safe = projectName.replace("&", "&amp;").replace("<", "&lt;");
             try {
-                writeText(new File(values, "strings.xml"),
+                writeText(strings,
                         "<resources>\n    <string name=\"app_name\">" + safe + "</string>\n</resources>\n");
+            } catch (IOException ignored) { }
+        }
+
+        File styles = new File(values, "styles.xml");
+        if (!styles.exists()) {
+            try {
+                writeText(styles,
+                        "<resources>\n" +
+                        "    <style name=\"AppTheme\" parent=\"Theme.AppCompat.Light.DarkActionBar\">\n" +
+                        "        <item name=\"colorPrimary\">#5E35B1</item>\n" +
+                        "        <item name=\"colorPrimaryDark\">#4527A0</item>\n" +
+                        "        <item name=\"colorAccent\">#D4AF37</item>\n" +
+                        "    </style>\n" +
+                        "</resources>\n");
             } catch (IOException ignored) { }
         }
     }
@@ -251,6 +276,179 @@ public class ProjectEditorActivity extends AppCompatActivity {
             writeText(m, x);
         } catch (IOException ignored) { }
     }
+
+    // ===== Launcher icon (mipmap) =====
+
+    /** mipmap-*\/ic_launcher.png banata hai. Kuch naya bana ho to true. */
+    private boolean ensureLauncherIcons() {
+        File res = new File(projectRoot, "Android/app/src/main/res");
+        if (!res.isDirectory()) return false;
+
+        String[] dirs = {"mipmap-mdpi", "mipmap-hdpi", "mipmap-xhdpi", "mipmap-xxhdpi", "mipmap-xxxhdpi"};
+        int[] sizes = {48, 72, 96, 144, 192};
+        boolean created = false;
+
+        for (int i = 0; i < dirs.length; i++) {
+            File dir = new File(res, dirs[i]);
+            dir.mkdirs();
+            File f = new File(dir, "ic_launcher.png");
+            if (f.exists()) continue;
+
+            Bitmap bmp = drawDefaultIcon(sizes[i]);
+            try (OutputStream os = new FileOutputStream(f)) {
+                bmp.compress(Bitmap.CompressFormat.PNG, 100, os);
+                created = true;
+            } catch (IOException ignored) {
+            } finally {
+                bmp.recycle();
+            }
+        }
+        return created;
+    }
+
+    /** Simple default icon: purple rounded square, white circle, gold dot. */
+    private Bitmap drawDefaultIcon(int s) {
+        Bitmap b = Bitmap.createBitmap(s, s, Bitmap.Config.ARGB_8888);
+        Canvas c = new Canvas(b);
+        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        float r = s * 0.22f;
+        p.setColor(0xFF5E35B1);
+        c.drawRoundRect(new RectF(0, 0, s, s), r, r, p);
+
+        p.setColor(0xFFFFFFFF);
+        c.drawCircle(s / 2f, s / 2f, s * 0.30f, p);
+
+        p.setColor(0xFFD4AF37);
+        c.drawCircle(s / 2f, s / 2f, s * 0.16f, p);
+        return b;
+    }
+
+    /** Old manifests: <application> me android:icon nahi hai to jod do. */
+    private void ensureManifestIcon() {
+        File m = new File(projectRoot, "Android/app/src/main/AndroidManifest.xml");
+        if (!m.isFile()) return;
+        try {
+            String x = readText(m);
+            if (x.contains("android:icon")) return;
+            int p = x.indexOf("<application");
+            if (p < 0) return;
+            x = x.substring(0, p + 12) + " android:icon=\"@mipmap/ic_launcher\"" + x.substring(p + 12);
+            writeText(m, x);
+        } catch (IOException ignored) { }
+    }
+
+    // ===== Gradle files (project root) =====
+
+    /** Android Studio jaisi root files. Sirf agar nahi hain. Compiler inhe use nahi karta. */
+    private void ensureGradleFiles() {
+        File mod = new File(projectRoot, "Android");
+        if (!new File(mod, "app/src/main").isDirectory()) return;
+
+        writeIfMissing(new File(mod, "settings.gradle"), settingsGradleText());
+        writeIfMissing(new File(mod, "build.gradle"), rootBuildGradleText());
+        writeIfMissing(new File(mod, "gradle.properties"), gradlePropertiesText());
+        writeIfMissing(new File(mod, "local.properties"), localPropertiesText());
+        writeIfMissing(new File(mod, "gradle/wrapper/gradle-wrapper.properties"), wrapperPropertiesText());
+        writeIfMissing(new File(mod, "app/build.gradle"), appBuildGradleText());
+        writeIfMissing(new File(mod, "app/proguard-rules.pro"), proguardText());
+    }
+
+    private void writeIfMissing(File f, String text) {
+        if (f.exists()) return;
+        try {
+            f.getParentFile().mkdirs();
+            writeText(f, text);
+        } catch (IOException ignored) { }
+    }
+
+    private String groovyEsc(String s) {
+        return s.replace("\\", "\\\\").replace("'", "\\'");
+    }
+
+    private String settingsGradleText() {
+        return "pluginManagement {\n" +
+                "    repositories {\n" +
+                "        google()\n" +
+                "        mavenCentral()\n" +
+                "        gradlePluginPortal()\n" +
+                "    }\n" +
+                "}\n" +
+                "dependencyResolutionManagement {\n" +
+                "    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)\n" +
+                "    repositories {\n" +
+                "        google()\n" +
+                "        mavenCentral()\n" +
+                "    }\n" +
+                "}\n" +
+                "rootProject.name = '" + groovyEsc(projectName) + "'\n" +
+                "include ':app'\n";
+    }
+
+    private String rootBuildGradleText() {
+        return "// Top-level build file\n" +
+                "plugins {\n" +
+                "    id 'com.android.application' version '8.2.2' apply false\n" +
+                "}\n";
+    }
+
+    private String gradlePropertiesText() {
+        return "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8\n" +
+                "android.useAndroidX=true\n" +
+                "android.nonTransitiveRClass=true\n";
+    }
+
+    private String localPropertiesText() {
+        return "## Android SDK ka path (Aalam SDK app se aayega)\n" +
+                "# sdk.dir=/path/to/Android/sdk\n";
+    }
+
+    private String wrapperPropertiesText() {
+        return "distributionBase=GRADLE_USER_HOME\n" +
+                "distributionPath=wrapper/dists\n" +
+                "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.5-bin.zip\n" +
+                "zipStoreBase=GRADLE_USER_HOME\n" +
+                "zipStorePath=wrapper/dists\n";
+    }
+
+    private String appBuildGradleText() {
+        return "// Note: Aalam Compiler Gradle nahi chalata. Ye file project ke structure ke liye hai.\n" +
+                "plugins {\n" +
+                "    id 'com.android.application'\n" +
+                "}\n\n" +
+                "android {\n" +
+                "    namespace '" + groovyEsc(projectPackage) + "'\n" +
+                "    compileSdk 34\n\n" +
+                "    defaultConfig {\n" +
+                "        applicationId \"" + projectPackage + "\"\n" +
+                "        minSdk 24\n" +
+                "        targetSdk 34\n" +
+                "        versionCode 1\n" +
+                "        versionName \"1.0\"\n" +
+                "    }\n\n" +
+                "    buildTypes {\n" +
+                "        release {\n" +
+                "            minifyEnabled false\n" +
+                "            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'\n" +
+                "        }\n" +
+                "    }\n\n" +
+                "    compileOptions {\n" +
+                "        sourceCompatibility JavaVersion.VERSION_1_8\n" +
+                "        targetCompatibility JavaVersion.VERSION_1_8\n" +
+                "    }\n" +
+                "}\n\n" +
+                "dependencies {\n" +
+                "    implementation 'androidx.appcompat:appcompat:1.6.1'\n" +
+                "}\n";
+    }
+
+    private String proguardText() {
+        return "# Add project specific ProGuard rules here.\n" +
+                "# You can control the set of applied configuration files using the\n" +
+                "# proguardFiles setting in build.gradle.\n";
+    }
+
+    // ===== Seed (new project) =====
 
     private String pkgPath() {
         return projectPackage.replace('.', '/');
@@ -326,18 +524,25 @@ public class ProjectEditorActivity extends AppCompatActivity {
                     "  \"package\": \"" + projectPackage + "\",\n" +
                     "  \"engine\": \"Aalam Game Engine\",\n" +
                     "  \"platform\": \"" + platform + "\",\n" +
-                    "  \"orientation\": \"portrait\",\n" +
+                    "  \"orientation\": \"" + projectOrientation + "\",\n" +
                     "  \"language\": \"" + String.join(" + ", languages) + "\"\n" +
                     "}");
         } else if (isAndroid) {
             String main = "app/src/main";
+            String orient = projectOrientation.equals("landscape") ? "sensorLandscape" : "portrait";
+
             seed(platform, main, "AndroidManifest.xml",
                     "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
                     "<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\"\n" +
                     "    package=\"" + projectPackage + "\">\n\n" +
-                    "    <application android:label=\"@string/app_name\"\n" +
-                    "        android:theme=\"@style/Theme.AppCompat.Light.DarkActionBar\">\n" +
-                    "        <activity android:name=\".MainActivity\" android:exported=\"true\">\n" +
+                    "    <application\n" +
+                    "        android:icon=\"@mipmap/ic_launcher\"\n" +
+                    "        android:label=\"@string/app_name\"\n" +
+                    "        android:theme=\"@style/AppTheme\">\n" +
+                    "        <activity\n" +
+                    "            android:name=\".MainActivity\"\n" +
+                    "            android:exported=\"true\"\n" +
+                    "            android:screenOrientation=\"" + orient + "\">\n" +
                     "            <intent-filter>\n" +
                     "                <action android:name=\"android.intent.action.MAIN\" />\n" +
                     "                <category android:name=\"android.intent.category.LAUNCHER\" />\n" +
@@ -362,7 +567,10 @@ public class ProjectEditorActivity extends AppCompatActivity {
                     "        android:layout_height=\"wrap_content\"\n" +
                     "        android:text=\"Hello World!\" />\n\n" +
                     "</LinearLayout>");
-            ensureAndroidDirs();
+
+            ensureAndroidDirs();     // strings.xml + styles.xml
+            ensureLauncherIcons();   // mipmap icons
+            ensureGradleFiles();     // build.gradle, settings.gradle ...
         } else {
             seed(platform, "", "app_config.json",
                     "{\n" +
@@ -698,6 +906,8 @@ public class ProjectEditorActivity extends AppCompatActivity {
             text = "📋 " + n;
         } else if (n.endsWith(".java") || n.endsWith(".kt")) {
             text = "🔵 " + (stripExt ? n.substring(0, n.lastIndexOf('.')) : n);
+        } else if (n.endsWith(".png")) {
+            text = "🖼 " + n;
         } else if (n.endsWith(".xml") && file.getAbsolutePath().contains("/res/")) {
             text = "🔶 " + n;
         } else {
